@@ -31,5 +31,6 @@ Contexto acima da janela útil: exige **estratégia de exploração** (o protoco
 
 1. Toda instância **DEVE** compilar/rodar e passar 100% da caracterização antes do plantio ser considerado válido.
 2. A distribuição de severidades DEVERIA cobrir as quatro (Crítica–Baixa) a partir do LEB-200.
-3. O nível declara o **orçamento de interação** do run (PROTOCOL.md §3): LEB-100/200 cabem em turno único; LEB-300+ admitem multi-turno com ferramentas de leitura.
-4. Comparações de ranking entre modelos usam **a mesma instância**, nunca apenas "o mesmo nível".
+3. A distribuição de **dificuldade** (Fácil/Moderada/Difícil/Especialista — `SCORING.md §9.2`) DEVERIA escalar com o nível: LEB-100 concentra Fácil/Moderada com poucas Difíceis e **sem** Especialista; Especialista passa a aparecer a partir do LEB-300. Toda falha plantada **DEVE** ter dificuldade ratada (obrigatório no schema).
+4. O nível declara o **orçamento de interação** do run (PROTOCOL.md §3): LEB-100/200 cabem em turno único; LEB-300+ admitem multi-turno com ferramentas de leitura.
+5. Comparações de ranking entre modelos usam **a mesma instância**, nunca apenas "o mesmo nível".

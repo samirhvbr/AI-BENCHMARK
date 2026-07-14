@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://leb.dev/schemas/scorecard.schema.json",
   "title": "LEB Scorecard",
-  "description": "Resultado machine-readable de um run LEB (SPEC 1.0.0)",
+  "description": "Resultado machine-readable de um run LEB (SPEC 1.1.0)",
   "type": "object",
   "required": ["leb_spec", "model", "instance", "matrix_sha256", "protocol", "categories", "penalties", "total"],
   "properties": {
@@ -44,6 +44,7 @@
           },
           "points_earned": { "type": "number" },
           "points_possible": { "type": "number" },
+          "confidence": { "type": "integer", "minimum": 0, "maximum": 100, "description": "Confiança 0–100 auto-reportada pelo modelo para este achado. Ausente se o modelo não reportou esta linha (falso negativo). Não pontua; alimenta calibration (SCORING §9.1)" },
           "notes": { "type": "string" }
         }
       }
@@ -110,6 +111,49 @@
       "type": "array",
       "description": "Achados reais fora da matriz (0 pontos; candidatos à próxima versão da instância)",
       "items": { "type": "string" }
+    },
+    "calibration": {
+      "type": "object",
+      "description": "Métrica INFORMATIVA de calibração sobre os achados reportados (confiança × acerto). NÃO entra no TOTAL. Ver SCORING.md §9.1.",
+      "properties": {
+        "reported_count": { "type": "integer", "minimum": 0, "description": "nº de achados reportados com confiança" },
+        "brier": { "type": "number", "minimum": 0, "maximum": 1, "description": "média de (confiança/100 − acerto)²; acerto=1 se casa falha plantada, 0 se isca/inexistente. Menor = melhor calibrado" },
+        "high_conf_false_positive_rate": { "type": "number", "minimum": 0, "maximum": 1, "description": "fração dos achados com confiança ≥80 que eram falso-positivo" },
+        "bins": {
+          "type": "array",
+          "description": "Diagrama de confiabilidade: confiança agrupada × taxa de acerto",
+          "items": {
+            "type": "object",
+            "required": ["range", "count", "hit_rate"],
+            "properties": {
+              "range": { "type": "string", "examples": ["0-20", "21-40", "41-60", "61-80", "81-100"] },
+              "count": { "type": "integer", "minimum": 0 },
+              "mean_confidence": { "type": "number" },
+              "hit_rate": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        }
+      }
+    },
+    "difficulty_breakdown": {
+      "type": "object",
+      "description": "Cobertura por dificuldade (INFORMATIVO, não pontua). Ver SCORING.md §9.2.",
+      "properties": {
+        "levels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["difficulty", "planted", "detected", "corrected"],
+            "properties": {
+              "difficulty": { "type": "string", "enum": ["Fácil", "Moderada", "Difícil", "Especialista"] },
+              "planted": { "type": "integer", "minimum": 0 },
+              "detected": { "type": "integer", "minimum": 0, "description": "achou (C1/R1 ≥ metade)" },
+              "corrected": { "type": "integer", "minimum": 0, "description": "corrigiu pleno (C3/R3)" }
+            }
+          }
+        },
+        "discovery_index": { "type": "number", "minimum": 0, "maximum": 100, "description": "detecção ponderada por dificuldade (pesos Fácil1·Moderada2·Difícil3·Especialista4); informativo" }
+      }
     },
     "total": { "type": "integer", "minimum": 0, "maximum": 1000 },
     "grade": { "type": "string", "enum": ["Platinum", "Gold", "Silver", "Bronze", "Reprovada"] }

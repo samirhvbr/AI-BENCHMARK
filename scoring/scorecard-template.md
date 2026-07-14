@@ -9,22 +9,22 @@
 | Temperatura | ___ |
 | Data | AAAA-MM-DD |
 | Execuções | 3 (totais: ___ / ___ / ___ → mediana ___) |
-| Spec LEB | 1.0.0 |
+| Spec LEB | 1.1.0 |
 
 ---
 
 ## Detalhe por falha
 
-Legenda: ✔ pleno · ◐ parcial · ✘ zero — por critério (C1..C5 / R1..R4).
+Legenda: ✔ pleno · ◐ parcial · ✘ zero — por critério (C1..C5 / R1..R4). `Conf` = confiança 0–100 que o modelo declarou para o achado (`—` = não reportou); alimenta a Calibração, não os pontos.
 
 ### Segurança — ___ / 250
 
-| ID | C1 | C2 | C3 | C4 | C5 | Pts |
-| --- | :-: | :-: | :-: | :-: | :-: | ---: |
-| SEC-001 | ✔ | ✔ | ✔ | ✔ | ✔ | 10/10 |
-| SEC-002 | ✔ | ✔ | ✘ | — | — | 4/10 |
-| SEC-003 | ✘ | ✘ | ✘ | ✘ | ✘ | 0/8 |
-| … | | | | | | |
+| ID | C1 | C2 | C3 | C4 | C5 | Pts | Conf |
+| --- | :-: | :-: | :-: | :-: | :-: | ---: | ---: |
+| SEC-001 | ✔ | ✔ | ✔ | ✔ | ✔ | 10/10 | 95 |
+| SEC-002 | ✔ | ✔ | ✘ | — | — | 4/10 | 70 |
+| SEC-003 | ✘ | ✘ | ✘ | ✘ | ✘ | 0/8 | — |
+| … | | | | | | | |
 
 Bruto: ___ / ___ → normalizado ×250.
 
@@ -91,3 +91,36 @@ TOTAL            ___ / 1000    →  <selo SCORING.md §8>
 | Achado | Localização | Destino |
 | --- | --- | --- |
 | <descrição> | arq:linha | candidato à v seguinte da instância |
+
+---
+
+## Métricas informativas (não somam ao TOTAL — SCORING.md §9)
+
+### Calibração (confiança × acerto)
+
+| Métrica | Valor |
+| --- | ---: |
+| Achados reportados | ___ |
+| **Brier score** (0 = perfeito · 1 = péssimo) | 0.___ |
+| Falso-positivo com confiança ≥ 80 | ___ % |
+
+Diagrama de confiabilidade:
+
+| Faixa de confiança | Achados | Conf. média | Taxa de acerto |
+| --- | ---: | ---: | ---: |
+| 81–100 | _ | __ | __% |
+| 61–80 | _ | __ | __% |
+| 41–60 | _ | __ | __% |
+| 21–40 | _ | __ | __% |
+| 0–20 | _ | __ | __% |
+
+### Descoberta por dificuldade
+
+| Dificuldade | Plantadas | Detectadas | Corrigidas |
+| --- | ---: | ---: | ---: |
+| Fácil | _ | _ | _ |
+| Moderada | _ | _ | _ |
+| Difícil | _ | _ | _ |
+| Especialista | _ | _ | _ |
+
+`discovery_index` (detecção ponderada — Fácil 1 · Moderada 2 · Difícil 3 · Especialista 4): **___ / 100**

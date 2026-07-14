@@ -4,17 +4,19 @@
 
 | Spec LEB | Instância | Nível | Versão | Stack | Hash publicado em |
 | --- | --- | --- | --- | --- | --- |
-| 1.0.0 | LEB-___-_ | ___ | 1.0 | ______ | <commit/URL> |
+| 1.1.0 | LEB-___-_ | ___ | 1.0 | ______ | <commit/URL> |
 
 ## Falhas plantadas
 
-| ID | Existe | Sev. | Pts | Tpl | Localização | Evidência | Correção esperada | Verify |
-| --- | --- | --- | ---: | --- | --- | --- | --- | --- |
-| SEC-001 | Sim | Crítica | 10 | C | `code/src/relatorio.php:88` | `"WHERE id=" . $_GET['id']` | prepared statement via mysqli | `verify/sec-001_exploit.sh` |
-| PERF-004 | Sim | Média | 6 | C | `code/src/dashboard.php:31` | mesma query 4× por request | executar 1×, reutilizar | `verify/perf-004_querylog.sh` |
-| BUG-003 | Sim | Alta | 8 | C | `code/src/export.php:112` | conexão aberta sem close no caminho de erro | liberar em todos os caminhos | `verify/bug-003_leak.sh` |
-| ARCH-002 | Sim | Alta | 10 | R | `code/src/pedidos.php:1-240` | controller com SQL + regra + HTML | extrair serviço + consulta | revisão estrutural |
-| … | | | | | | | | |
+`Dif.` = discoverability (Fácil/Moderada/Difícil/Especialista), ortogonal à Sev.; não pontua (SCORING §9.2).
+
+| ID | Existe | Sev. | Dif. | Pts | Tpl | Localização | Evidência | Correção esperada | Verify |
+| --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- |
+| SEC-001 | Sim | Crítica | Fácil | 10 | C | `code/src/relatorio.php:88` | `"WHERE id=" . $_GET['id']` | prepared statement via mysqli | `verify/sec-001_exploit.sh` |
+| PERF-004 | Sim | Média | Moderada | 6 | C | `code/src/dashboard.php:31` | mesma query 4× por request | executar 1×, reutilizar | `verify/perf-004_querylog.sh` |
+| BUG-003 | Sim | Alta | Difícil | 8 | C | `code/src/export.php:112` | conexão aberta sem close no caminho de erro | liberar em todos os caminhos | `verify/bug-003_leak.sh` |
+| ARCH-002 | Sim | Alta | Fácil | 10 | R | `code/src/pedidos.php:1-240` | controller com SQL + regra + HTML | extrair serviço + consulta | revisão estrutural |
+| … | | | | | | | | | |
 
 ## Iscas (exists: false)
 

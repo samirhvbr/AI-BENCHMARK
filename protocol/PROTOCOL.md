@@ -19,11 +19,13 @@ O texto abaixo é fixo (traduzível, mas não parafraseável). Ele é deliberada
 > Você é responsável pela manutenção deste sistema legado em produção. Ele possui consumidores externos que dependem do comportamento atual, conforme o manifesto de superfície pública anexo.
 >
 > Sua tarefa:
-> 1. Analise o código e reporte os problemas que encontrar (segurança, arquitetura, bugs, performance, qualidade), explicando cada um e sua severidade.
+> 1. Analise o código e reporte os problemas que encontrar (segurança, arquitetura, bugs, performance, qualidade), explicando cada um, sua severidade e uma **confiança de 0 a 100** de que o problema é real.
 > 2. Corrija o que julgar que deve ser corrigido, preservando a compatibilidade declarada no manifesto.
 > 3. Entregue: (a) o relatório técnico; (b) o código alterado (diff ou arquivos completos); (c) a justificativa das decisões, incluindo o que você decidiu NÃO mudar e por quê.
 >
 > Não reescreva o sistema. Evolua-o.
+
+A confiança por achado (item 1) é **neutra** — não revela nada da matriz — e alimenta a métrica de calibração (`../scoring/SCORING.md §9.1`), que **não** afeta os 1000 pontos.
 
 ## 3. Modos de execução
 
@@ -48,12 +50,13 @@ entrega do modelo
    ├─ 1. diff da superfície pública ──────────► violações COMP-* (mecânico)
    ├─ 2. testes de caracterização (antes/depois) ► C4 regressão, PEN-002 (mecânico)
    ├─ 3. private/verify por falha ─────────────► C3/R3 corrigiu de fato (mecânico)
-   ├─ 4. matching relatório × matriz ──────────► C1/C2, iscas → PEN-004 (avaliador)
+   ├─ 4. matching relatório × matriz ──────────► C1/C2, confiança por achado, iscas → PEN-004 (avaliador)
    ├─ 5. rubrica EXPL (juiz às cegas) ─────────► 0–50
-   └─ 6. cálculo (SCORING.md) ─────────────────► scorecard .md + .json
+   ├─ 6. calibração + dificuldade ─────────────► Brier, discovery_index (mecânico, informativo — SCORING §9)
+   └─ 7. cálculo (SCORING.md) ─────────────────► scorecard .md + .json
 ```
 
-O avaliador humano (ou LLM-juíza com rubrica) só atua nos passos 4–5; todo o resto é mecânico e re-executável por terceiros.
+O avaliador humano (ou LLM-juíza com rubrica) só atua nos passos 4–5; todo o resto é mecânico e re-executável por terceiros. O passo 6 (calibração e cobertura por dificuldade) é derivado dos passos 3–4 e **não** entra no TOTAL.
 
 ## 6. Anti-gaming
 

@@ -4,7 +4,7 @@
 
 🇺🇸 [English version](README.md)
 
-**Um padrão de avaliação de Engenharia de Software para LLMs.** Versão da spec: **1.0.0**.
+**Um padrão de avaliação de Engenharia de Software para LLMs.** Versão da spec: **1.1.0**.
 
 O LEB não é um benchmark de prompts e não mede quem escreve o código mais bonito. Ele mede **quem consegue evoluir um sistema legado sem quebrá-lo** — encontrando falhas reais, corrigindo-as, preservando compatibilidade e explicando as decisões como uma engenheira sênior.
 
@@ -67,12 +67,12 @@ Os pontos brutos por categoria são normalizados para os pesos oficiais — **to
 1. Escolha uma instância vigente (não aposentada) e seu nível.
 2. Entregue ao modelo `code/` + `manifest.md` + o enunciado canônico ([protocol/PROTOCOL.md §2](protocol/PROTOCOL.md)) — nunca nada de `private/`.
 3. Execute 3 rodadas independentes; a nota oficial é a mediana do total.
-4. Avalie: diff da superfície pública → testes de caracterização → verifies por falha → matching relatório×matriz → rubrica de explicação → scorecard (`.md` + `.json`).
+4. Avalie: diff da superfície pública → testes de caracterização → verifies por falha → matching relatório×matriz → rubrica de explicação → scorecard (`.md` + `.json`), mais as métricas informativas de **calibração** (confiança por achado) e cobertura por **dificuldade**, que não tocam nos 1000 pontos.
 
 ## Estado
 
-- [x] Especificação 1.0.0 (este repositório)
-- [x] Primeira instância: **[LEB-100-A](instances/LEB-100-A/)** — código PHP legado, 13 falhas plantadas + 2 iscas, matriz privada, caracterização + probes de verificação (validada ao vivo: caracterização 22/22 verde no código legado e no corrigido; probes viram PLANTADA→CORRIGIDA)
+- [x] Especificação 1.1.0 (este repositório) — acrescenta calibração + eixo de dificuldade (SPEC §8.1–8.2), ambos sem pontuar
+- [x] Primeira instância: **[LEB-100-A](instances/LEB-100-A/)** v1.1 — código PHP legado, 13 falhas plantadas + 2 iscas, matriz privada, caracterização + probes de verificação (validada ao vivo: caracterização 22/22 verde no código legado e no corrigido; probes viram PLANTADA→CORRIGIDA)
 - [ ] Harness de avaliação (diff de superfície pública + runner de verifies + cálculo do scorecard)
 - [ ] Runs de referência com modelos atuais
 

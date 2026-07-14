@@ -102,3 +102,48 @@ TOTAL = Σ notas_categorias + nota_COMP + nota_EXPL − Σ PEN-*      (piso 0, t
 | 600–749 | **LEB Silver** — útil com supervisão |
 | 400–599 | **LEB Bronze** — requer revisão integral |
 | < 400 | **Reprovada** — risco ao sistema |
+
+## 9. Métricas informativas (NÃO entram no TOTAL)
+
+As duas métricas abaixo enriquecem o scorecard sem alterar os 1000 pontos (§7). Elas descrevem *como* um modelo acerta — nunca inflam nem descontam a nota. Podem servir de **critério de desempate** entre modelos de TOTAL igual e como sinal de maturidade.
+
+### 9.1 Calibração (confiança por achado)
+
+O protocolo (`../protocol/PROTOCOL.md §2`) pede que o modelo atribua a **cada problema reportado** uma confiança inteira de **0 a 100**. Sobre o conjunto de achados reportados, define-se o *acerto* de cada um:
+
+- casa uma falha plantada (`exists: true`) → acerto = 1 (verdadeiro-positivo);
+- casa uma isca (`exists: false`) ou é invenção pura → acerto = 0 (falso-positivo).
+
+Falhas plantadas que o modelo **não** reportou (falso-negativo) já valem 0 em C1/R1 e **não** entram no conjunto de calibração — calibração mede convicção sobre o que foi *afirmado*.
+
+**Métrica principal — Brier score:**
+
+```text
+brier = média_i ( (confiança_i/100 − acerto_i)² )      # 0 = perfeito · 1 = péssimo
+```
+
+Um modelo bem calibrado dá confiança alta ao que acerta e baixa ao que erra. Chutar tudo com 99% e acertar metade ⇒ Brier alto.
+
+**Diagrama de confiabilidade (complemento):** agrupar os achados por faixa de confiança (`0-20 · 21-40 · 41-60 · 61-80 · 81-100`) e comparar a confiança média de cada faixa com a taxa de acerto real. Sinal legível: `high_conf_false_positive_rate` = fração dos achados com confiança ≥ 80 que eram falso-positivo (mede excesso de confiança).
+
+Não pontua. Um modelo que *sabe o que não sabe* é mais útil em produção que um que chuta com convicção — e isso passa despercebido no TOTAL.
+
+### 9.2 Eixo de dificuldade (discoverability)
+
+Cada falha plantada carrega, além da severidade, uma **dificuldade** (`../matrix/matrix.schema.json`): quão difícil é *achar* a falha — **ortogonal ao impacto**. Uma SQLi por concatenação é Crítica porém Fácil; um leak no caminho de erro é só Média, mas Difícil. Dificuldade **não** altera os pontos (esses vêm só da severidade, §1).
+
+| Dificuldade | Âncora operacional |
+| --- | --- |
+| **Fácil** | visível na leitura direta de um trecho; padrão canônico que um linter básico ou dev júnior atento pega (concatenação SQL, `md5()` de senha, segredo literal) |
+| **Moderada** | exige seguir o fluxo de dados ou reconhecer um caso-limite (N+1 num loop, divisão por conjunto vazio); dev pleno pega em revisão cuidadosa |
+| **Difícil** | falha por *ausência* (algo que deveria existir e não está) ou caminho não óbvio (ramo de erro, autorização, sessão); passa batido em revisão normal (session fixation, IDOR, leak no erro, CSV injection) |
+| **Especialista** | edge-case sutil, concorrência ou raciocínio sobre invariantes de domínio; a maioria dos revisores humanos erra (raro abaixo do LEB-300) |
+
+O scorecard reporta, por dificuldade, **plantadas × detectadas (C1/R1 ≥ metade) × corrigidas (C3/R3)** — o "quantas difíceis achou". E um índice informativo:
+
+```text
+discovery_index = 100 × Σ(peso_d × detectadas_d) / Σ(peso_d × plantadas_d)
+                  # pesos: Fácil 1 · Moderada 2 · Difícil 3 · Especialista 4
+```
+
+Dois modelos com o mesmo TOTAL mas `discovery_index` distintos têm perfis diferentes: um varreu o óbvio, o outro chegou nas armadilhas. Também não pontua.

@@ -1,12 +1,12 @@
 {
-  "leb_spec": "1.0.0",
+  "leb_spec": "1.1.0",
   "instance": "LEB-100-A",
   "level": 100,
-  "version": "1.0",
+  "version": "1.1",
   "language": "php8-mysqli",
   "entries": [
     {
-      "id": "SEC-001", "exists": true, "severity": "Crítica", "points": 10, "template": "C",
+      "id": "SEC-001", "exists": true, "severity": "Crítica", "difficulty": "Fácil", "points": 10, "template": "C",
       "location": "code/lib.php:82",
       "evidence": "titulo LIKE '%\" . $busca . \"%' — termo de busca concatenado na SQL",
       "expected_fix": "prepared statement mysqli com bind do termo (LIKE CONCAT('%', ?, '%'))",
@@ -14,7 +14,7 @@
       "notes": "Manter mysqli. Escapar sem tratar %/_ = correção parcial (C3 metade)."
     },
     {
-      "id": "SEC-003", "exists": true, "severity": "Alta", "points": 8, "template": "C",
+      "id": "SEC-003", "exists": true, "severity": "Alta", "difficulty": "Fácil", "points": 8, "template": "C",
       "location": "code/index.php:82",
       "evidence": "echo '<p>Resultados para: ' . $busca; e value=\"' . $busca . '\" (index.php:79)",
       "expected_fix": "htmlspecialchars($busca, ENT_QUOTES) nos dois pontos de saída",
@@ -22,21 +22,21 @@
       "notes": "Mesma variável ecoada crua em :79 e :82; uma correção resolve ambos."
     },
     {
-      "id": "SEC-008", "exists": true, "severity": "Média", "points": 6, "template": "C",
+      "id": "SEC-008", "exists": true, "severity": "Média", "difficulty": "Difícil", "points": 6, "template": "C",
       "location": "code/lib.php:140",
       "evidence": "titulo gravado cru no fputcsv; valor iniciando com = + - @ vira fórmula",
       "expected_fix": "neutralizar células de fórmula (prefixar apóstrofo) sem alterar o formato do CSV",
       "verify": "verify/probes.php sec-008"
     },
     {
-      "id": "SEC-013", "exists": true, "severity": "Alta", "points": 8, "template": "C",
+      "id": "SEC-013", "exists": true, "severity": "Alta", "difficulty": "Difícil", "points": 8, "template": "C",
       "location": "code/index.php:24",
       "evidence": "login grava $_SESSION['uid'] sem regenerar o id de sessão",
       "expected_fix": "session_regenerate_id(true) após autenticar com sucesso",
       "verify": "verify/README.md#sec-013"
     },
     {
-      "id": "SEC-014", "exists": true, "severity": "Alta", "points": 8, "template": "C",
+      "id": "SEC-014", "exists": true, "severity": "Alta", "difficulty": "Fácil", "points": 8, "template": "C",
       "location": "code/lib.php:15",
       "evidence": "md5($senha) sem salt",
       "expected_fix": "password_hash/password_verify com migração transparente no login (aceita md5 legado e re-hash)",
@@ -44,14 +44,14 @@
       "notes": "Invalidar todas as senhas = COMP-003 e quebra a caracterização de login."
     },
     {
-      "id": "SEC-015", "exists": true, "severity": "Alta", "points": 8, "template": "C",
+      "id": "SEC-015", "exists": true, "severity": "Alta", "difficulty": "Fácil", "points": 8, "template": "C",
       "location": "code/config.php:12",
       "evidence": "DB_PASS ('N3tX@2013!prod') e SMTP_API_KEY hardcoded (config.php:15)",
       "expected_fix": "externalizar via env/config fora do VCS; mesmos valores em runtime; recomendar rotação",
       "verify": "verify/README.md#sec-015"
     },
     {
-      "id": "SEC-017", "exists": true, "severity": "Crítica", "points": 10, "template": "C",
+      "id": "SEC-017", "exists": true, "severity": "Crítica", "difficulty": "Difícil", "points": 10, "template": "C",
       "location": "code/index.php:53",
       "evidence": "dispatcher carrega e exibe o chamado (verChamado) sem verificar se o solicitante é o dono (cliente) ou um técnico — IDOR via ?ver=id",
       "expected_fix": "autorizar no dispatcher após carregar: negar se papel=cliente e usuario_id != uid; técnico vê todos. Preservar a assinatura verChamado(mysqli,int)",
@@ -59,21 +59,21 @@
       "notes": "Passar $uid para verChamado (mudando a assinatura) para 'corrigir' dispara COMP-001. Regra: técnico vê tudo; esconder de quem tem direito = COMP-003."
     },
     {
-      "id": "BUG-001", "exists": true, "severity": "Alta", "points": 8, "template": "C",
+      "id": "BUG-001", "exists": true, "severity": "Alta", "difficulty": "Moderada", "points": 8, "template": "C",
       "location": "code/lib.php:116",
       "evidence": "return $soma / $qtd com $qtd possivelmente 0 (nenhum chamado respondido)",
       "expected_fix": "tratar conjunto vazio antes de dividir (retornar 0.0)",
       "verify": "verify/probes.php bug-001"
     },
     {
-      "id": "BUG-004", "exists": true, "severity": "Média", "points": 6, "template": "C",
+      "id": "BUG-004", "exists": true, "severity": "Média", "difficulty": "Difícil", "points": 6, "template": "C",
       "location": "code/lib.php:133",
       "evidence": "if ($res === false) return; deixa $fp aberto (file handle leak)",
       "expected_fix": "fechar $fp em todos os caminhos, inclusive o de erro",
       "verify": "verify/README.md#bug-004"
     },
     {
-      "id": "PERF-001", "exists": true, "severity": "Alta", "points": 8, "template": "C",
+      "id": "PERF-001", "exists": true, "severity": "Alta", "difficulty": "Moderada", "points": 8, "template": "C",
       "location": "code/lib.php:89",
       "evidence": "tecnicoNome() dentro do loop -> 1 query por chamado (N+1); repete no export lib.php:137",
       "expected_fix": "carregar técnicos em lote (JOIN ou WHERE id IN (...))",
@@ -81,21 +81,21 @@
       "notes": "Mesma origem (tecnicoNome) em :89 e :137; atribuir uma vez."
     },
     {
-      "id": "ARCH-002", "exists": true, "severity": "Alta", "points": 10, "template": "R",
+      "id": "ARCH-002", "exists": true, "severity": "Alta", "difficulty": "Fácil", "points": 10, "template": "R",
       "location": "code/index.php:41-97",
       "evidence": "dispatcher faz roteamento + autorização + regra + montagem de HTML",
       "expected_fix": "separar apresentação (templates) e orquestração; controller magro chamando a lib",
       "verify": "verify/README.md#estruturais"
     },
     {
-      "id": "ARCH-009", "exists": true, "severity": "Baixa", "points": 6, "template": "R",
+      "id": "ARCH-009", "exists": true, "severity": "Baixa", "difficulty": "Moderada", "points": 6, "template": "R",
       "location": "code/lib.php:28",
       "evidence": "status 1/2/3 (formatarStatus) e prioridade 3/4/30 (rotuloPrioridade) como números soltos",
       "expected_fix": "constantes nomeadas com os mesmos valores",
       "verify": "verify/README.md#estruturais"
     },
     {
-      "id": "CLN-007", "exists": true, "severity": "Média", "points": 8, "template": "R",
+      "id": "CLN-007", "exists": true, "severity": "Média", "difficulty": "Fácil", "points": 8, "template": "R",
       "location": "code/lib.php:43",
       "evidence": "4 níveis de if aninhado em rotuloPrioridade",
       "expected_fix": "guard clauses / retorno antecipado preservando a tabela-verdade",

@@ -1,6 +1,6 @@
 # LEB — LLM Engineering Benchmark
 
-**Especificação Técnica** · Versão **1.0.0** · Status: **Rascunho normativo**
+**Especificação Técnica** · Versão **1.1.0** · Status: **Rascunho normativo**
 
 ---
 
@@ -110,6 +110,8 @@ Os critérios são **cumulativos e independentes**: um modelo pode encontrar e e
 
 A matriz torna a avaliação **objetiva e reproduzível**: verifica-se exatamente quais falhas o modelo **encontrou**, quais **corrigiu**, quais **ignorou** e quais **inventou** (falso positivo → penalidade, §6). Linhas "Existe: Não" funcionam como **iscas** contra modelos que listam falhas genéricas sem ler o código.
 
+Cada falha plantada carrega também uma **dificuldade** (Fácil / Moderada / Difícil / Especialista) — quão difícil é *achar* a falha, ortogonal à severidade. Ela não altera pontos; alimenta só o eixo de descoberta do scorecard (§8.2).
+
 Regras completas de construção, ocultação (hash público, gabarito privado) e correspondência em [`matrix/MATRIX.md`](matrix/MATRIX.md).
 
 ---
@@ -179,6 +181,14 @@ Explicação        48 / 50
 TOTAL            888 / 1000
 ```
 
+### 8.1 Calibração (confiança por achado) — informativa
+
+O modelo atribui a **cada problema reportado** uma confiança de 0 a 100 (`protocol/PROTOCOL.md §2`). O scorecard reporta um **Brier score** e um diagrama de confiabilidade sobre os achados reportados (acerto = casou falha plantada; erro = isca ou invenção). Mede *calibração* — quem acerta com convicção vs. quem chuta com sorte. **Não entra nos 1000 pontos**; pode servir de desempate. Detalhe em `scoring/SCORING.md §9.1`.
+
+### 8.2 Eixo de dificuldade — informativo
+
+Cada falha plantada tem uma **dificuldade** (§5). O scorecard reporta, por dificuldade, quantas foram **detectadas** e **corrigidas**, mais um `discovery_index` ponderado — o "quantas difíceis o modelo achou". Ortogonal à severidade e **fora dos 1000 pontos**. Detalhe em `scoring/SCORING.md §9.2`.
+
 ---
 
 ## 9. Invariantes do padrão
@@ -194,6 +204,14 @@ TOTAL            888 / 1000
 ## 10. Versionamento
 
 A spec segue **SemVer**: MAJOR muda pontuação/regras; MINOR adiciona falhas/níveis; PATCH corrige texto. Instâncias são versionadas separadamente (`LEB-200-A v1.2`).
+
+### Notas da versão 1.1.0
+
+Duas métricas **informativas** que não alteram os 1000 pontos nem os IDs (por isso MINOR, retrocompatível):
+- **Calibração** (§8.1) — confiança de 0–100 por achado no enunciado neutro; Brier score + diagrama de confiabilidade no scorecard (`scoring/SCORING.md §9.1`).
+- **Eixo de dificuldade** (§8.2) — campo `difficulty` (Fácil/Moderada/Difícil/Especialista) por falha plantada, ortogonal à severidade; cobertura por dificuldade + `discovery_index` no scorecard (`scoring/SCORING.md §9.2`).
+
+Instâncias que adotam a 1.1.0 passam a ratear `difficulty` em toda falha plantada (obrigatório no schema para `exists: true`). A instância de referência foi para **LEB-100-A v1.1** (só metadado de dificuldade; falhas, pontos e localizações intactos).
 
 ### Notas da versão 1.0.0
 
