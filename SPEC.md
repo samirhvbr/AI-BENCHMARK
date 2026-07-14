@@ -1,0 +1,200 @@
+# LEB — LLM Engineering Benchmark
+
+**Especificação Técnica** · Versão **1.0.0** · Status: **Rascunho normativo**
+
+---
+
+## 0. Resumo
+
+O LEB é um padrão de avaliação da capacidade de uma LLM de atuar como **Engenheira de Software** na manutenção, evolução e refatoração de **sistemas legados**, preservando compatibilidade e aplicando boas práticas de arquitetura.
+
+O benchmark **não mede** quem escreve o código mais bonito. Ele mede **quem consegue evoluir um sistema existente sem quebrá-lo**.
+
+As palavras-chave **DEVE**, **NÃO DEVE**, **DEVERIA** e **PODE** neste documento seguem o espírito da RFC 2119.
+
+---
+
+## 1. Filosofia
+
+O LEB privilegia, nesta ordem de valores:
+
+1. **Engenharia** — decisões fundamentadas, não estética.
+2. **Compatibilidade** — o código existente tem clientes; quebrá-los é a falha mais grave.
+3. **Arquitetura** — evolução estrutural sem big-bang rewrite.
+4. **Segurança** — vulnerabilidades reais, corrigidas sem regressão.
+5. **Performance** — gargalos identificados com evidência, não superstição.
+6. **Maturidade técnica** — saber explicar *por que*, priorizar e reconhecer trade-offs.
+
+Corolário central: **reescrever tudo do zero não é engenharia, é fuga** — e o LEB penaliza isso explicitamente (§6).
+
+---
+
+## 2. Documentos do padrão
+
+| Documento | Papel |
+| --- | --- |
+| `SPEC.md` (este) | Núcleo normativo: pontuação, regras, definições |
+| [`taxonomy/`](taxonomy/) | Catálogo oficial das falhas (SEC, ARCH, PERF, BUG, CLN, COMP) |
+| [`scoring/SCORING.md`](scoring/SCORING.md) | Modelo de pontuação detalhado, critérios e normalização |
+| [`matrix/MATRIX.md`](matrix/MATRIX.md) | **Matriz Oficial de Falhas** — o gabarito oculto (coração do benchmark) |
+| [`levels/LEVELS.md`](levels/LEVELS.md) | Níveis LEB-100 a LEB-500 |
+| [`protocol/PROTOCOL.md`](protocol/PROTOCOL.md) | Protocolo de execução e reprodutibilidade |
+| `scoring/scorecard-template.md` | Scorecard oficial de resultado |
+
+---
+
+## 3. Pontuação geral
+
+Nota máxima: **1000 pontos**, distribuídos assim:
+
+| Categoria | Prefixo | Peso |
+| --- | --- | ---: |
+| Segurança | `SEC` | **250** |
+| Arquitetura | `ARCH` | **200** |
+| Bugs | `BUG` | **150** |
+| Performance | `PERF` | **150** |
+| Clean Code | `CLN` | **100** |
+| Compatibilidade | `COMP` | **100** |
+| Explicação Técnica | `EXPL` | **50** |
+| **Total** | | **1000** |
+
+- As categorias SEC, ARCH, BUG, PERF e CLN são pontuadas contra a **Matriz Oficial de Falhas** da instância (§5) e **normalizadas** para o peso da categoria (ver `scoring/SCORING.md §4`).
+- **Compatibilidade** é uma categoria de **conduta**: começa em 100 e cada violação `COMP-*` desconta (piso 0). Violações geram **desconto, não bônus**.
+- **Explicação Técnica** é avaliada por rubrica (5 dimensões × 10 pontos).
+
+---
+
+## 4. Como pontuar cada falha
+
+Cada falha plantada na instância possui critérios independentes. Existem dois templates de critérios (detalhes e tabelas por severidade em `scoring/SCORING.md`):
+
+### Template C — Correção (SEC, PERF, BUG)
+
+Exemplo — **SEC-001 SQL Injection**, severidade Crítica:
+
+| Critério | Pontos |
+| --- | ---: |
+| Encontrou | 2 |
+| Explicou corretamente | 2 |
+| Corrigiu | 3 |
+| Não introduziu regressão | 2 |
+| Manteve compatibilidade | 1 |
+| **Total** | **10** |
+
+### Template R — Refatoração (ARCH, CLN)
+
+Exemplo — **ARCH-001 God Object**, severidade Crítica:
+
+| Critério | Pontos |
+| --- | ---: |
+| Identificou | 3 |
+| Explicou | 2 |
+| Refatorou | 5 |
+| Compatível | 2 |
+| **Total** | **12** |
+
+Os critérios são **cumulativos e independentes**: um modelo pode encontrar e explicar uma falha sem corrigi-la (ganha parcial), ou corrigi-la introduzindo regressão (perde o critério de regressão).
+
+---
+
+## 5. Matriz Oficial de Falhas (gabarito oculto)
+
+**Este é o coração do benchmark.** Cada instância LEB possui uma matriz secreta que declara, para cada ID da taxonomia:
+
+| ID | Existe no código | Severidade | Pontos | Localização |
+| --- | --- | ---: | ---: | --- |
+| SEC-001 | Sim | Crítica | 10 | `src/relatorio.php:88` |
+| PERF-004 | Sim | Média | 6 | `src/dashboard.php:31` |
+| BUG-003 | Sim | Alta | 8 | `src/export.php:112` |
+| ARCH-006 | **Não** | — | 0 | — |
+
+A matriz torna a avaliação **objetiva e reproduzível**: verifica-se exatamente quais falhas o modelo **encontrou**, quais **corrigiu**, quais **ignorou** e quais **inventou** (falso positivo → penalidade, §6). Linhas "Existe: Não" funcionam como **iscas** contra modelos que listam falhas genéricas sem ler o código.
+
+Regras completas de construção, ocultação (hash público, gabarito privado) e correspondência em [`matrix/MATRIX.md`](matrix/MATRIX.md).
+
+---
+
+## 6. Penalidades
+
+Diferencial do LEB: certas ações **descontam pontos automaticamente**. Isso impede que a IA "ganhe pontos" jogando tudo fora e começando do zero.
+
+### 6.1 Violações de compatibilidade (descontam da categoria COMP, piso 0)
+
+| ID | Ação | Desconto |
+| --- | --- | ---: |
+| COMP-001 | Mudou assinatura pública | −30 |
+| COMP-002 | Mudou retorno | −20 |
+| COMP-003 | Mudou comportamento / regra de negócio | −30 |
+| COMP-004 | Removeu método | −20 |
+| COMP-005 | Mudou exceção | −15 |
+| COMP-006 | Mudou formato HTML | −10 |
+| COMP-007 | Mudou rota | −20 |
+| COMP-008 | Mudou contrato público (API) | −25 |
+| COMP-009 | Mudou banco (schema/dados) | −25 |
+| COMP-010 | Mudou tecnologia (ex.: mysqli → PDO) | −20 |
+
+### 6.2 Penalidades gerais (descontam do TOTAL, piso 0)
+
+| ID | Ação | Penalidade |
+| --- | --- | ---: |
+| PEN-001 | Introduziu novo bug | −15 (cada) |
+| PEN-002 | Criou regressão (quebrou teste de caracterização) | −20 (cada) |
+| PEN-003 | Reescreveu todo o projeto sem necessidade | −25 |
+| PEN-004 | Falso positivo (reportou falha inexistente da matriz-isca) | −5 (cada, teto −25) |
+
+Desambiguação (para não punir duas vezes o mesmo fato): regressão **localizada na correção de uma falha específica** → perde o critério "não introduziu regressão" daquela falha, sem PEN. Regressão **fora do escopo de qualquer falha** (detectada pelos testes de caracterização) → PEN-002. Defeito novo em código novo que não quebra teste existente → PEN-001.
+
+---
+
+## 7. Níveis do benchmark
+
+| Nível | Linhas | Objetivo |
+| --- | ---: | --- |
+| LEB-100 | ~300 | Refatoração simples |
+| LEB-200 | ~1.000 | Sistema legado pequeno |
+| LEB-300 | ~3.000 | Múltiplos arquivos |
+| LEB-400 | ~8.000 | Projeto empresarial |
+| LEB-500 | ~20.000 | Sistema corporativo completo |
+
+Composição de falhas por nível em [`levels/LEVELS.md`](levels/LEVELS.md).
+
+---
+
+## 8. Scorecard oficial
+
+Todo run produz um scorecard no formato de `scoring/scorecard-template.md` (+ JSON machine-readable). Exemplo abreviado:
+
+```text
+Modelo: GPT-5.6
+--------------------
+Segurança        SEC-001 ✔  SEC-002 ✔  SEC-003 ✘  SEC-004 ✔ ...
+                 210 / 250
+Arquitetura      175 / 200
+Performance      130 / 150
+Bugs             140 / 150
+Clean Code        90 / 100
+Compatibilidade   95 / 100
+Explicação        48 / 50
+--------------------
+TOTAL            888 / 1000
+```
+
+---
+
+## 9. Invariantes do padrão
+
+1. IDs da taxonomia são **imutáveis** — nunca renumerar; depreciar e criar novo ID.
+2. A matriz de uma instância publicada **NÃO DEVE** mudar; erros exigem nova versão da instância.
+3. O enunciado dado ao modelo é **fixo e neutro** (`protocol/PROTOCOL.md §2`) — não pode vazar dicas da matriz.
+4. Todo resultado publicado **DEVE** citar: versão da spec, ID+hash da instância, protocolo do run (turnos, ferramentas, temperatura) e scorecard JSON.
+5. Comparações entre modelos só são válidas **na mesma instância e mesmo protocolo**.
+
+---
+
+## 10. Versionamento
+
+A spec segue **SemVer**: MAJOR muda pontuação/regras; MINOR adiciona falhas/níveis; PATCH corrige texto. Instâncias são versionadas separadamente (`LEB-200-A v1.2`).
+
+### Notas da versão 1.0.0
+
+Formalizações além do rascunho original: templates C/R com tabelas por severidade (`scoring/SCORING.md §3`), normalização por categoria (§3), PEN-004 (falsos positivos contra iscas), desambiguação regressão local × global (§6.2), e protocolo de reprodutibilidade (mediana de 3 runs).

@@ -1,0 +1,35 @@
+# Ambiente reprodutível para caracterização e verificação do LEB-100-A.
+#   docker compose up -d                    # sobe o MySQL
+#   docker compose run --rm php php characterization/run.php
+#   docker compose run --rm php php private/verify/probes.php all   # (só o avaliador tem private/)
+services:
+  db:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: suporte
+    # A porta não é exposta no host de propósito (evita conflito com um MySQL local):
+    # os comandos rodam via `docker compose run php ...` e falam com o banco pela
+    # rede interna do compose (DB_HOST=db). Para acessar do host, adicione:
+    #   ports: ["3307:3306"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-proot"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  php:
+    image: php:8.4-cli
+    working_dir: /app
+    volumes:
+      - ..:/app                     # monta a instância inteira em /app
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASS: root
+      DB_NAME: suporte
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: ["sh", "-c", "docker-php-ext-install mysqli >/dev/null 2>&1; exec \"$@\"", "--"]

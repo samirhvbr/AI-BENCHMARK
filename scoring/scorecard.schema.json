@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://leb.dev/schemas/scorecard.schema.json",
+  "title": "LEB Scorecard",
+  "description": "Resultado machine-readable de um run LEB (SPEC 1.0.0)",
+  "type": "object",
+  "required": ["leb_spec", "model", "instance", "matrix_sha256", "protocol", "categories", "penalties", "total"],
+  "properties": {
+    "leb_spec": { "type": "string" },
+    "model": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "provider": { "type": "string" }
+      }
+    },
+    "instance": { "type": "string", "examples": ["LEB-200-A v1.0"] },
+    "matrix_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "protocol": {
+      "type": "object",
+      "required": ["mode", "date", "runs"],
+      "properties": {
+        "mode": { "type": "string", "enum": ["S", "A"] },
+        "turn_budget": { "type": "integer" },
+        "temperature": { "type": ["number", "string"] },
+        "date": { "type": "string", "format": "date" },
+        "runs": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "integer" }, "description": "TOTAL das 3 execuções; o scorecard detalha a mediana" }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "description": "Uma entrada por linha da matriz avaliada",
+      "items": {
+        "type": "object",
+        "required": ["id", "points_earned", "points_possible"],
+        "properties": {
+          "id": { "type": "string" },
+          "criteria": {
+            "type": "object",
+            "description": "Pontos por critério: C1..C5 ou R1..R4",
+            "additionalProperties": { "type": "number" }
+          },
+          "points_earned": { "type": "number" },
+          "points_possible": { "type": "number" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "categories": {
+      "type": "object",
+      "required": ["SEC", "ARCH", "BUG", "PERF", "CLN", "COMP", "EXPL"],
+      "properties": {
+        "SEC": { "$ref": "#/$defs/normalizedCategory" },
+        "ARCH": { "$ref": "#/$defs/normalizedCategory" },
+        "BUG": { "$ref": "#/$defs/normalizedCategory" },
+        "PERF": { "$ref": "#/$defs/normalizedCategory" },
+        "CLN": { "$ref": "#/$defs/normalizedCategory" },
+        "COMP": {
+          "type": "object",
+          "required": ["score", "max", "violations"],
+          "properties": {
+            "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "max": { "const": 100 },
+            "violations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "count", "deduction"],
+                "properties": {
+                  "id": { "type": "string", "pattern": "^COMP-\\d{3}$" },
+                  "count": { "type": "integer", "minimum": 1 },
+                  "deduction": { "type": "integer" },
+                  "detail": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "EXPL": {
+          "type": "object",
+          "required": ["score", "max", "rubric"],
+          "properties": {
+            "score": { "type": "integer", "minimum": 0, "maximum": 50 },
+            "max": { "const": 50 },
+            "rubric": {
+              "type": "object",
+              "required": ["clareza", "precisao", "causa_raiz", "priorizacao", "trade_offs"],
+              "additionalProperties": { "type": "integer", "minimum": 0, "maximum": 10 }
+            }
+          }
+        }
+      }
+    },
+    "penalties": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "count", "deduction"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^PEN-\\d{3}$" },
+          "count": { "type": "integer", "minimum": 1 },
+          "deduction": { "type": "integer" },
+          "detail": { "type": "string" }
+        }
+      }
+    },
+    "extra_findings": {
+      "type": "array",
+      "description": "Achados reais fora da matriz (0 pontos; candidatos à próxima versão da instância)",
+      "items": { "type": "string" }
+    },
+    "total": { "type": "integer", "minimum": 0, "maximum": 1000 },
+    "grade": { "type": "string", "enum": ["Platinum", "Gold", "Silver", "Bronze", "Reprovada"] }
+  },
+  "$defs": {
+    "normalizedCategory": {
+      "type": "object",
+      "required": ["raw_earned", "raw_possible", "score", "max"],
+      "properties": {
+        "raw_earned": { "type": "number" },
+        "raw_possible": { "type": "number" },
+        "score": { "type": "integer", "description": "round(raw_earned/raw_possible × max)" },
+        "max": { "type": "integer", "enum": [250, 200, 150, 100] }
+      }
+    }
+  }
+}
