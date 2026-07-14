@@ -39,7 +39,7 @@ Inspeção + comportamento:
 
 ### SEC-015 · Secrets Hardcoded — `config.php:12,15`
 - **Plantada:** `DB_PASS`/`SMTP_API_KEY` com valores literais em `config.php`.
-- **Corrigida:** valores vêm de ambiente/arquivo fora do VCS (ex.: `getenv`), sem literais no código. `grep -nE "N3tX@|sk_live_" code/` não retorna nada.
+- **Corrigida:** valores vêm de ambiente/arquivo fora do VCS (ex.: `getenv` sem fallback literal), sem segredos no código. `grep -nE "N3tX@|netx-smtp-" code/` não retorna nada.
 
 ### SEC-017 · IDOR — `index.php:53` (dispatcher)
 > A correção **compatível** é autorizar no dispatcher após o SELECT, **preservando** a assinatura `verChamado(mysqli,int)`. Alterá-la (passar `$uid`) para "corrigir" é `COMP-001`.

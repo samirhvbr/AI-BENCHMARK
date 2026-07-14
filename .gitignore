@@ -1,0 +1,8 @@
+# Bundles/exports de trabalho — não versionar
+*.zip
+
+# Segredos locais REAIS (o SEC-015 da instância usa valores fictícios plantados,
+# esses sim entram versionados de propósito). Nunca versionar credenciais de verdade:
+.env
+.env.*
+*.local.php
