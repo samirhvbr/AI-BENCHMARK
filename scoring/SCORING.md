@@ -147,3 +147,9 @@ discovery_index = 100 × Σ(peso_d × detectadas_d) / Σ(peso_d × plantadas_d)
 ```
 
 Dois modelos com o mesmo TOTAL mas `discovery_index` distintos têm perfis diferentes: um varreu o óbvio, o outro chegou nas armadilhas. Também não pontua.
+
+### 9.3 Custo e tempo (do run do modelo)
+
+O scorecard registra o **custo de produzir a entrega** (bloco `cost_time` em `../scoring/scorecard.schema.json`): `elapsed_seconds` (wall-clock da resolução), `phases[]`, `tokens` (input/output/cache/total), `output_tokens_per_second`, `finish_reason`/`status` e um `usd_estimate` **derivado** (tokens × tabela de preços do provedor). Barato importa tanto quanto correto: dois modelos com o mesmo TOTAL mas 10× de diferença em US$/run não são equivalentes na prática.
+
+Mede o **run do modelo**, não o harness (o `timing_s` do relatório do harness é o tempo das fases docker da avaliação, coisa diferente). **Não entra no TOTAL** — é informativo e serve de desempate/custo-benefício. Preenchido quando o modelo é de fato executado (o harness mecânico avalia uma entrega já pronta e não mede a inferência).

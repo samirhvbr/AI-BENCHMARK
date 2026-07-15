@@ -4,7 +4,7 @@
 
 🇧🇷 [Versão em português](README_br.md)
 
-**A Software Engineering evaluation standard for LLMs.** Spec version: **1.1.0**.
+**A Software Engineering evaluation standard for LLMs.** Spec version: **1.2.0**.
 
 LEB is not a prompt benchmark and does not measure who writes the prettiest code. It measures **who can evolve a legacy system without breaking it** — finding real flaws, fixing them, preserving compatibility, and explaining decisions like a senior engineer would.
 
@@ -73,9 +73,10 @@ Note: the specification documents are currently written in Portuguese (pt-BR); E
 
 ## Status
 
-- [x] Specification 1.1.0 (this repository) — adds calibration + difficulty axis (SPEC §8.1–8.2), both non-scoring
+- [x] Specification 1.2.0 (this repository) — calibration + difficulty axis (§8.1–8.2), cost/time block (§8.3), non-scoring
 - [x] First instance: **[LEB-100-A](instances/LEB-100-A/)** v1.1 — PHP legacy code, 13 planted flaws + 2 decoys, private matrix, characterization + verify probes (validated live: characterization 22/22 green on both pristine and fixed code; probes flip PLANTADA→CORRIGIDA)
-- [ ] Evaluation harness (public-surface diff + verify runner + scorecard computation)
+- [x] Evaluation **harness** ([`harness/`](harness/)) — mechanical pipeline (characterization before/after + probes + difficulty coverage → JSON), stdlib-only, instance-agnostic; validated both ways on LEB-100-A
+- [ ] LLM-judge steps (report×matrix matching, EXPL rubric) + final 1000-pt scorecard assembly
 - [ ] Reference runs with current models
 
 ## License & contributing

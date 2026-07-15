@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://leb.dev/schemas/scorecard.schema.json",
   "title": "LEB Scorecard",
-  "description": "Resultado machine-readable de um run LEB (SPEC 1.1.0)",
+  "description": "Resultado machine-readable de um run LEB (SPEC 1.2.0)",
   "type": "object",
   "required": ["leb_spec", "model", "instance", "matrix_sha256", "protocol", "categories", "penalties", "total"],
   "properties": {
@@ -153,6 +153,34 @@
           }
         },
         "discovery_index": { "type": "number", "minimum": 0, "maximum": 100, "description": "detecção ponderada por dificuldade (pesos Fácil1·Moderada2·Difícil3·Especialista4); informativo" }
+      }
+    },
+    "cost_time": {
+      "type": "object",
+      "description": "Custo e tempo do RUN DO MODELO (não do harness). INFORMATIVO — não entra no TOTAL. Ver SCORING.md §9.3.",
+      "properties": {
+        "elapsed_seconds": { "type": "number", "minimum": 0, "description": "wall-clock da resolução pelo modelo" },
+        "phases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "seconds"],
+            "properties": { "name": { "type": "string" }, "seconds": { "type": "number", "minimum": 0 } }
+          }
+        },
+        "tokens": {
+          "type": "object",
+          "properties": {
+            "input": { "type": "integer", "minimum": 0 },
+            "output": { "type": "integer", "minimum": 0 },
+            "cache": { "type": "integer", "minimum": 0 },
+            "total": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "output_tokens_per_second": { "type": "number", "minimum": 0 },
+        "usd_estimate": { "type": "number", "minimum": 0, "description": "derivado: tokens × tabela de preços do provedor" },
+        "finish_reason": { "type": "string" },
+        "status": { "type": "string", "examples": ["ok", "timeout", "error"] }
       }
     },
     "total": { "type": "integer", "minimum": 0, "maximum": 1000 },

@@ -93,24 +93,39 @@ $casos = [
 
 $alvo = $argv[1] ?? 'all';
 $rodar = $alvo === 'all' ? array_keys($casos) : [$alvo];
+$json = (bool) getenv('LEB_PROBE_JSON'); // saída machine-readable p/ o harness
 
 $db = conectar();
 $aindaVulneravel = 0;
-echo "Verificação LEB-100-A — code/ em " . realpath(CODE_DIR) . "\n\n";
+$resultados = [];
+if (!$json) {
+    echo "Verificação LEB-100-A — code/ em " . realpath(CODE_DIR) . "\n\n";
+}
 foreach ($rodar as $id) {
     if (!isset($casos[$id])) {
         fwrite(STDERR, "caso desconhecido: {$id}\n");
         exit(2);
     }
     [$corrigida, $msg] = $casos[$id]($db);
-    $rotulo = $corrigida ? "\033[32mCORRIGIDA\033[0m" : "\033[31mPLANTADA \033[0m";
-    printf("  [%s] %-9s — %s\n", $rotulo, $id, $msg);
+    $resultados[] = ['id' => $id, 'corrigida' => $corrigida, 'msg' => $msg];
     if (!$corrigida) {
         $aindaVulneravel++;
     }
+    if (!$json) {
+        $rotulo = $corrigida ? "\033[32mCORRIGIDA\033[0m" : "\033[31mPLANTADA \033[0m";
+        printf("  [%s] %-9s — %s\n", $rotulo, $id, $msg);
+    }
 }
-echo "\n" . str_repeat('-', 60) . "\n";
-echo $aindaVulneravel === 0
-    ? "Todas as falhas verificadas estão CORRIGIDAS.\n"
-    : "{$aindaVulneravel} falha(s) ainda PLANTADA(s).\n";
+if ($json) {
+    echo json_encode([
+        'code_dir' => realpath(CODE_DIR),
+        'probes' => $resultados,
+        'ainda_plantadas' => $aindaVulneravel,
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) . "\n";
+} else {
+    echo "\n" . str_repeat('-', 60) . "\n";
+    echo $aindaVulneravel === 0
+        ? "Todas as falhas verificadas estão CORRIGIDAS.\n"
+        : "{$aindaVulneravel} falha(s) ainda PLANTADA(s).\n";
+}
 exit($aindaVulneravel === 0 ? 0 : 1);

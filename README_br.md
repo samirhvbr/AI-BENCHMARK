@@ -4,7 +4,7 @@
 
 🇺🇸 [English version](README.md)
 
-**Um padrão de avaliação de Engenharia de Software para LLMs.** Versão da spec: **1.1.0**.
+**Um padrão de avaliação de Engenharia de Software para LLMs.** Versão da spec: **1.2.0**.
 
 O LEB não é um benchmark de prompts e não mede quem escreve o código mais bonito. Ele mede **quem consegue evoluir um sistema legado sem quebrá-lo** — encontrando falhas reais, corrigindo-as, preservando compatibilidade e explicando as decisões como uma engenheira sênior.
 
@@ -71,9 +71,10 @@ Os pontos brutos por categoria são normalizados para os pesos oficiais — **to
 
 ## Estado
 
-- [x] Especificação 1.1.0 (este repositório) — acrescenta calibração + eixo de dificuldade (SPEC §8.1–8.2), ambos sem pontuar
+- [x] Especificação 1.2.0 (este repositório) — calibração + eixo de dificuldade (§8.1–8.2), bloco de custo/tempo (§8.3), sem pontuar
 - [x] Primeira instância: **[LEB-100-A](instances/LEB-100-A/)** v1.1 — código PHP legado, 13 falhas plantadas + 2 iscas, matriz privada, caracterização + probes de verificação (validada ao vivo: caracterização 22/22 verde no código legado e no corrigido; probes viram PLANTADA→CORRIGIDA)
-- [ ] Harness de avaliação (diff de superfície pública + runner de verifies + cálculo do scorecard)
+- [x] **Harness** de avaliação ([`harness/`](harness/)) — pipeline mecânico (caracterização antes/depois + probes + cobertura por dificuldade → JSON), só-stdlib, agnóstico de instância; validado nos dois sentidos na LEB-100-A
+- [ ] Passos com juiz LLM (matching relatório×matriz, rubrica EXPL) + montagem final do scorecard de 1000 pts
 - [ ] Runs de referência com modelos atuais
 
 ## Licença e contribuição

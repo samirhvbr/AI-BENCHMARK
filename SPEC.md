@@ -1,6 +1,6 @@
 # LEB — LLM Engineering Benchmark
 
-**Especificação Técnica** · Versão **1.1.0** · Status: **Rascunho normativo**
+**Especificação Técnica** · Versão **1.2.0** · Status: **Rascunho normativo**
 
 ---
 
@@ -189,6 +189,14 @@ O modelo atribui a **cada problema reportado** uma confiança de 0 a 100 (`proto
 
 Cada falha plantada tem uma **dificuldade** (§5). O scorecard reporta, por dificuldade, quantas foram **detectadas** e **corrigidas**, mais um `discovery_index` ponderado — o "quantas difíceis o modelo achou". Ortogonal à severidade e **fora dos 1000 pontos**. Detalhe em `scoring/SCORING.md §9.2`.
 
+### 8.3 Custo e tempo — informativo
+
+O scorecard registra o custo de produzir a entrega (`cost_time`: wall-clock, tokens, tok/s e `usd_estimate` derivado). Barato importa tanto quanto correto: mesmo TOTAL com 10× de diferença em custo não é equivalente. **Fora dos 1000 pontos**. Detalhe em `scoring/SCORING.md §9.3`.
+
+### 8.4 Harness de avaliação
+
+Os passos mecânicos do pipeline (`protocol/PROTOCOL.md §5`: 1–3, 6) são executados pelo [`harness/`](harness/) — orquestrador só-stdlib, agnóstico de instância, que emite um relatório mecânico JSON. Os passos com juiz (4–5) e a normalização final ficam por cima dele.
+
 ---
 
 ## 9. Invariantes do padrão
@@ -204,6 +212,12 @@ Cada falha plantada tem uma **dificuldade** (§5). O scorecard reporta, por difi
 ## 10. Versionamento
 
 A spec segue **SemVer**: MAJOR muda pontuação/regras; MINOR adiciona falhas/níveis; PATCH corrige texto. Instâncias são versionadas separadamente (`LEB-200-A v1.2`).
+
+### Notas da versão 1.2.0
+
+Sem mudança em pontos, IDs ou matrizes (por isso MINOR; instâncias 1.1.0 seguem válidas sem alteração):
+- **Custo e tempo** (§8.3) — bloco `cost_time` informativo no scorecard (`scoring/SCORING.md §9.3`).
+- **Harness de avaliação** (§8.4) — `harness/leb_harness.py` implementa os passos mecânicos do pipeline (caracterização antes/depois, probes, eixo de dificuldade) e emite relatório JSON; `probes.php` ganhou saída JSON (`LEB_PROBE_JSON=1`). Os passos de juiz (4–5) e a normalização final continuam pendentes.
 
 ### Notas da versão 1.1.0
 

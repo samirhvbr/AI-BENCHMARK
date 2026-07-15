@@ -9,7 +9,7 @@
 | Temperatura | ___ |
 | Data | AAAA-MM-DD |
 | Execuções | 3 (totais: ___ / ___ / ___ → mediana ___) |
-| Spec LEB | 1.1.0 |
+| Spec LEB | 1.2.0 |
 
 ---
 
@@ -124,3 +124,13 @@ Diagrama de confiabilidade:
 | Especialista | _ | _ | _ |
 
 `discovery_index` (detecção ponderada — Fácil 1 · Moderada 2 · Difícil 3 · Especialista 4): **___ / 100**
+
+### Custo & tempo (do run do modelo)
+
+| Métrica | Valor |
+| --- | ---: |
+| Wall-clock | ___ s |
+| Tokens (in / out / cache / total) | _ / _ / _ / _ |
+| Tokens de saída / s | ___ |
+| US$/run (derivado) | $ ___ |
+| finish_reason / status | ___ |

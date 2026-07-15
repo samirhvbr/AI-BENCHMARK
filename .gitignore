@@ -6,3 +6,10 @@
 .env
 .env.*
 *.local.php
+
+# Resultados de runs do harness (grandes; scorecards oficiais publicados à parte)
+instances/*/runs/
+
+# Python
+__pycache__/
+*.pyc
