@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://leb.dev/schemas/judge.schema.json",
+  "title": "LEB Judge Verdict",
+  "description": "Veredito do juiz (PROTOCOL §5 passos 4-5) — entrada do montador harness/score.py. SPEC 1.2.0, ver scoring/JUDGE.md",
+  "type": "object",
+  "required": ["planted", "expl_rubric"],
+  "properties": {
+    "instance": { "type": "string", "examples": ["LEB-100-A v1.1"] },
+    "matrix_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "model": {
+      "type": "object",
+      "properties": { "name": { "type": "string" }, "version": { "type": "string" }, "provider": { "type": "string" } }
+    },
+    "protocol": {
+      "type": "object",
+      "properties": {
+        "mode": { "type": "string", "enum": ["S", "A"] },
+        "date": { "type": "string" },
+        "runs": { "type": "array", "items": { "type": "integer" } }
+      }
+    },
+    "judge": {
+      "type": "object",
+      "description": "Quem julgou (LLM ou humano) — para auditoria/full-disclosure",
+      "properties": { "type": { "type": "string" }, "id": { "type": "string" }, "date": { "type": "string" } }
+    },
+    "planted": {
+      "type": "array",
+      "description": "Uma entrada por falha PLANTADA da matriz. C3/R3 das falhas cobertas por probe e C4 (regressão global) vêm do harness e sobrescrevem o que estiver aqui.",
+      "items": {
+        "type": "object",
+        "required": ["id", "reported"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^(SEC|ARCH|PERF|BUG|CLN)-\\d{3}(\\.[a-z])?$" },
+          "reported": { "type": "boolean", "description": "o modelo reportou esta falha no relatório?" },
+          "confidence": { "type": "integer", "minimum": 0, "maximum": 100, "description": "confiança que o MODELO declarou para este achado (só se reported=true)" },
+          "criteria": {
+            "type": "object",
+            "description": "Veredito por critério. C: C1..C5 · R: R1..R4. Valores: full | half | none. Binários (C4,C5,R4) usam só full/none.",
+            "additionalProperties": { "type": "string", "enum": ["full", "half", "none"] }
+          },
+          "report_excerpt": { "type": "string", "description": "trecho do relatório do modelo que ancora o veredito (auditoria)" }
+        }
+      }
+    },
+    "false_positives": {
+      "type": "array",
+      "description": "Achados que o modelo reportou e NÃO existem. is_isca=true (ou reported_as é uma isca da matriz) dispara PEN-004.",
+      "items": {
+        "type": "object",
+        "required": ["reported_as"],
+        "properties": {
+          "reported_as": { "type": "string" },
+          "is_isca": { "type": "boolean" },
+          "confidence": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "detail": { "type": "string" }
+        }
+      }
+    },
+    "extra_findings": {
+      "type": "array",
+      "description": "Achados reais fora da matriz (0 pts, 0 penalidade; candidatos à próxima versão)",
+      "items": { "type": "string" }
+    },
+    "comp_violations": {
+      "type": "array",
+      "description": "Violações de superfície pública atribuídas às mudanças do modelo (SPEC §6.1).",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^COMP-\\d{3}$" },
+          "count": { "type": "integer", "minimum": 1, "default": 1 },
+          "detail": { "type": "string" }
+        }
+      }
+    },
+    "expl_rubric": {
+      "type": "object",
+      "description": "Rubrica de Explicação Técnica, 5×10 (SCORING §6), julgada ÀS CEGAS das outras categorias.",
+      "required": ["clareza", "precisao", "causa_raiz", "priorizacao", "trade_offs"],
+      "properties": {
+        "clareza": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "precisao": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "causa_raiz": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "priorizacao": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "trade_offs": { "type": "integer", "minimum": 0, "maximum": 10 }
+      }
+    },
+    "penalties": {
+      "type": "object",
+      "description": "Penalidades que dependem de julgamento. PEN-002 (regressão) vem do harness; PEN-004 (iscas) sai de false_positives.",
+      "properties": {
+        "PEN-001": { "type": "integer", "minimum": 0, "description": "novos bugs introduzidos (−15 cada)" },
+        "PEN-003": { "type": "integer", "minimum": 0, "description": "reescreveu sem necessidade (−25)" }
+      }
+    },
+    "cost_time": { "type": "object", "description": "opcional; repassado ao scorecard (SCORING §9.3)" }
+  }
+}

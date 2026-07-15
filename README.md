@@ -76,8 +76,8 @@ Note: the specification documents are currently written in Portuguese (pt-BR); E
 - [x] Specification 1.2.0 (this repository) — calibration + difficulty axis (§8.1–8.2), cost/time block (§8.3), non-scoring
 - [x] First instance: **[LEB-100-A](instances/LEB-100-A/)** v1.1 — PHP legacy code, 13 planted flaws + 2 decoys, private matrix, characterization + verify probes (validated live: characterization 22/22 green on both pristine and fixed code; probes flip PLANTADA→CORRIGIDA)
 - [x] Evaluation **harness** ([`harness/`](harness/)) — mechanical pipeline (characterization before/after + probes + difficulty coverage → JSON), stdlib-only, instance-agnostic; validated both ways on LEB-100-A
-- [ ] LLM-judge steps (report×matrix matching, EXPL rubric) + final 1000-pt scorecard assembly
-- [ ] Reference runs with current models
+- [x] Scorecard **assembler** ([`harness/score.py`](harness/score.py)) + **judge interface** ([`scoring/JUDGE.md`](scoring/JUDGE.md), `judge.schema.json`) — deterministic 1000-pt scorecard from mechanical evidence + judge verdict; validated end-to-end (incl. the mysqli→PDO rewrite scoring 0/Reprovada, and a Gold run at 860)
+- [ ] Reference runs — execute real models + run the LLM judge to produce official scorecards
 
 ## License & contributing
 

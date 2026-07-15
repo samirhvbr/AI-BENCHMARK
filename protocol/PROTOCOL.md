@@ -58,6 +58,8 @@ entrega do modelo
 
 O avaliador humano (ou LLM-juíza com rubrica) só atua nos passos 4–5; todo o resto é mecânico e re-executável por terceiros. O passo 6 (calibração e cobertura por dificuldade) é derivado dos passos 3–4 e **não** entra no TOTAL.
 
+**Ferramentas:** os passos mecânicos 1–3 e 6 rodam em [`../harness/leb_harness.py`](../harness/leb_harness.py) (relatório mecânico JSON); os passos 4–5 seguem [`../scoring/JUDGE.md`](../scoring/JUDGE.md) e produzem um veredito (`../scoring/judge.schema.json`); o passo 7 é o montador [`../harness/score.py`](../harness/score.py), que junta mecânico + veredito + matriz e emite o scorecard oficial.
+
 ## 6. Anti-gaming
 
 1. **Iscas** na matriz punem checklist recitado sem leitura (PEN-004).

@@ -1,0 +1,62 @@
+# LEB — Protocolo do Juiz (passos 4–5)
+
+Normativo. Operacionaliza os passos **com julgamento** do pipeline (`../protocol/PROTOCOL.md §5`):
+o que o harness mecânico **não** decide sozinho. A saída é um **veredito** JSON
+(`judge.schema.json`) que o montador [`../harness/score.py`](../harness/score.py) transforma no
+scorecard oficial. Juiz = humano **ou** LLM com esta rubrica; em ambos os casos o veredito é
+auditável (full-disclosure).
+
+O juiz recebe: o **relatório do modelo** (prosa), o **código entregue**, a **matriz** (gabarito)
+e o **relatório mecânico** do harness (o que já foi verificado: C3 por probe, C4 regressão). O juiz
+**não** re-verifica o que é mecânico — só preenche o que exige julgamento.
+
+## Passo 4 — matching relatório × matriz
+
+Regras de correspondência em `../matrix/MATRIX.md §5`. Para cada achado do relatório do modelo,
+mapeie para **no máximo uma** linha da matriz (a mais específica), com tolerância de localização
+de ±10 linhas ou mesma função. Depois, para cada falha PLANTADA, preencha os critérios:
+
+| Critério | full | half | none |
+| --- | --- | --- | --- |
+| **C1/R1** achou/identificou | ID certo + trecho certo | classe errada mas trecho certo | não reportou / lugar errado |
+| **C2/R2** explicou | mecanismo real da falha | — (use full/none) | genérico/boilerplate/errado |
+| **C3** corrigiu *(falha com probe: vem do harness)* | eliminou a falha | mitigou, não eliminou | não corrigiu |
+| **R3** refatorou | estrutura-alvo alcançada | parcial genuíno | cosmético/nada |
+| **C4** sem regressão *(vem do harness)* | caracterização verde | — | quebrou o entorno |
+| **C5/R4** manteve compat | sem violação COMP atribuível | — | violou contrato |
+
+- **Correção silenciosa** (código corrigido mas não citado no relatório): pontua C3/C4/C5, **não** C1/C2 (`MATRIX §5.4`).
+- **C4/C5 (e R4) só contam se houve correção** (C3/R3 tentado). Sem conserto não há regressão nem compat a premiar — o montador zera isso automaticamente.
+- Registre a **confiança** que o modelo declarou por achado (enunciado pede 0–100) → alimenta a calibração.
+
+### Falsos positivos e achados extra
+
+- Achado que casa uma **isca** (`exists:false`) → `false_positives` com `is_isca:true` → **PEN-004** (−5, teto −25).
+- Achado **inexistente** que não é isca declarada → `false_positives` (`is_isca:false`): 0 penalidade, mas conta como erro na **calibração**.
+- Achado **real fora da matriz** → `extra_findings`: 0 ponto, 0 penalidade, vira candidato à próxima versão da instância.
+
+### Compatibilidade (COMP)
+
+Liste em `comp_violations` cada violação de superfície pública atribuível às mudanças do modelo
+(`../SPEC.md §6.1`), com `count` por ocorrência. Ex.: migrar mysqli→PDO = `COMP-010` **+** `COMP-001`
+por assinatura pública alterada. (Até o diff de superfície virar mecânico no harness, isto é do juiz.)
+
+## Passo 5 — rubrica EXPL (às cegas)
+
+Pontue a Explicação Técnica do relatório em 5 dimensões × 10 (âncoras em `SCORING.md §6`):
+`clareza · precisao · causa_raiz · priorizacao · trade_offs`. **Às cegas**: o juiz de EXPL não vê
+o scorecard das outras categorias, para não contaminar a nota.
+
+## Montagem
+
+```sh
+python3 harness/score.py \
+    --matrix    instances/LEB-100-A/private/matrix.json \
+    --mechanical relatorio_mecanico.json   # saída do leb_harness.py \
+    --judge      veredito.json             # este documento, no formato judge.schema.json \
+    --out        scorecard.json
+```
+
+O montador aplica SCORING §1 (pontos por critério), §4 (normalização), §5 (COMP), §7 (TOTAL),
+§8 (selo), §9.1 (Brier) e §9.2 (dificuldade) — tudo determinístico. PEN-002 (regressão) e o C4
+saem do relatório mecânico; PEN-004 sai dos `false_positives`.

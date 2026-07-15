@@ -9,8 +9,8 @@ Roda os passos que **não** exigem juiz e emite um relatório JSON:
 | 2. caracterização antes/depois → regressão (C4, PEN-002) | `characterization/run.php` no legado e na entrega | ✅ |
 | 3. `private/verify/probes.php` → C3 corrigiu de fato | probes PLANTADA→CORRIGIDA | ✅ |
 | 6. calibração + dificuldade | cobertura por dificuldade (corrigidas por probe) | ✅ parcial |
-| 4–5. matching relatório×matriz + rubrica EXPL | exigem **juiz** (LLM/humano) | ⏳ próxima etapa |
-| 7. normalização final 1000 pts | depende de 4–5 | ⏳ |
+| 4–5. matching relatório×matriz + rubrica EXPL | **juiz** (LLM/humano) segue `../scoring/JUDGE.md` → veredito JSON | ✅ interface |
+| 7. normalização final 1000 pts | `score.py` junta mecânico + veredito + matriz → scorecard | ✅ |
 
 Filosofia: **só-stdlib, agnóstico de instância**. O orquestrador (Python) chama os
 `.php` da própria instância como subprocessos dentro do docker dela — a linguagem da
@@ -49,6 +49,23 @@ Código de saída **2** se a entrega regrediu (sinal para CI), **0** caso contr�
 > O relatório mecânico **não é** o scorecard final de 1000 pontos — é a evidência
 > objetiva sobre a qual o juiz (passos 4–5) monta o scorecard completo
 > (`../scoring/scorecard-template.md`).
+
+## Montar o scorecard final (`score.py`)
+
+Com o relatório mecânico + o veredito do juiz (`../scoring/JUDGE.md`,
+formato `../scoring/judge.schema.json`), o montador emite o scorecard de 1000 pontos:
+
+```sh
+python3 harness/score.py \
+    --matrix     instances/LEB-100-A/private/matrix.json \
+    --mechanical relatorio_mecanico.json \
+    --judge      veredito.json \
+    --out        scorecard.json
+```
+
+Determinístico: aplica toda a aritmética de `../scoring/SCORING.md` (pontos por critério,
+normalização por categoria, COMP, penalidades, TOTAL, selo, Brier, eixo de dificuldade). A
+evidência mecânica tem prioridade — C3 das falhas com probe e C4 (regressão) sobrescrevem o juiz.
 
 ## Custo / tempo
 

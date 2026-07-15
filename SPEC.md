@@ -39,6 +39,8 @@ Corolário central: **reescrever tudo do zero não é engenharia, é fuga** — 
 | [`matrix/MATRIX.md`](matrix/MATRIX.md) | **Matriz Oficial de Falhas** — o gabarito oculto (coração do benchmark) |
 | [`levels/LEVELS.md`](levels/LEVELS.md) | Níveis LEB-100 a LEB-500 |
 | [`protocol/PROTOCOL.md`](protocol/PROTOCOL.md) | Protocolo de execução e reprodutibilidade |
+| [`scoring/JUDGE.md`](scoring/JUDGE.md) | Protocolo do juiz (passos 4–5): matching e rubrica EXPL |
+| [`harness/`](harness/) | Ferramentas: `leb_harness.py` (mecânico) + `score.py` (montador do scorecard) |
 | `scoring/scorecard-template.md` | Scorecard oficial de resultado |
 
 ---
@@ -195,7 +197,12 @@ O scorecard registra o custo de produzir a entrega (`cost_time`: wall-clock, tok
 
 ### 8.4 Harness de avaliação
 
-Os passos mecânicos do pipeline (`protocol/PROTOCOL.md §5`: 1–3, 6) são executados pelo [`harness/`](harness/) — orquestrador só-stdlib, agnóstico de instância, que emite um relatório mecânico JSON. Os passos com juiz (4–5) e a normalização final ficam por cima dele.
+O pipeline (`protocol/PROTOCOL.md §5`) é implementado em [`harness/`](harness/), só-stdlib e agnóstico de instância:
+- `leb_harness.py` roda os passos **mecânicos** (1–3, 6) e emite um relatório JSON;
+- os passos com **juiz** (4–5) seguem [`scoring/JUDGE.md`](scoring/JUDGE.md) e produzem um veredito (`scoring/judge.schema.json`) — humano ou LLM, sempre auditável;
+- `score.py` (passo 7) junta mecânico + veredito + matriz e monta o **scorecard oficial de 1000 pontos** de forma determinística (toda a aritmética de `scoring/SCORING.md`).
+
+Falta só **executar modelos de verdade** para gerar os primeiros scorecards de referência.
 
 ---
 

@@ -74,8 +74,8 @@ Os pontos brutos por categoria são normalizados para os pesos oficiais — **to
 - [x] Especificação 1.2.0 (este repositório) — calibração + eixo de dificuldade (§8.1–8.2), bloco de custo/tempo (§8.3), sem pontuar
 - [x] Primeira instância: **[LEB-100-A](instances/LEB-100-A/)** v1.1 — código PHP legado, 13 falhas plantadas + 2 iscas, matriz privada, caracterização + probes de verificação (validada ao vivo: caracterização 22/22 verde no código legado e no corrigido; probes viram PLANTADA→CORRIGIDA)
 - [x] **Harness** de avaliação ([`harness/`](harness/)) — pipeline mecânico (caracterização antes/depois + probes + cobertura por dificuldade → JSON), só-stdlib, agnóstico de instância; validado nos dois sentidos na LEB-100-A
-- [ ] Passos com juiz LLM (matching relatório×matriz, rubrica EXPL) + montagem final do scorecard de 1000 pts
-- [ ] Runs de referência com modelos atuais
+- [x] **Montador** do scorecard ([`harness/score.py`](harness/score.py)) + **interface do juiz** ([`scoring/JUDGE.md`](scoring/JUDGE.md), `judge.schema.json`) — scorecard determinístico de 1000 pts a partir do mecânico + veredito; validado de ponta a ponta (inclusive a reescrita mysqli→PDO tirando 0/Reprovada e um run Gold em 860)
+- [ ] Runs de referência — executar modelos de verdade + rodar o juiz LLM para gerar os scorecards oficiais
 
 ## Licença e contribuição
 

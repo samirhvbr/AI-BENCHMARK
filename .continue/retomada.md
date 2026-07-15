@@ -146,9 +146,10 @@ calibração e dificuldade na 1.1.0. Candidato a virar a **v1.2.0** (MINOR, retr
 - `cost_time` (informativo, não pontua) no `scorecard.schema.json` + template + SPEC §8.3 / SCORING §9.3.
 - `harness/README.md` documenta contrato de saída e uso.
 
-**Falta (próxima sessão), na ordem:**
-1. **Passos com juiz (4–5)** — matching relatório×matriz (C1/C2, iscas→PEN-004) + rubrica EXPL às cegas.
-   É o que falta pra fechar o scorecard de 1000 pts. Decidir: juiz LLM com rubrica vs. mapeamento manual assistido.
-2. **Montagem final do scorecard** (passo 7): pegar mecânico + juiz → normalizar → JSON no `scorecard.schema.json`.
-3. **Runs de referência (#3)** — aí sim rodar modelos de verdade (precisa acesso a API/execução do modelo,
-   que o harness mecânico não faz). Regra: 3 execuções, mediana. Sugestão de 1º lote: Opus 4.8, Sonnet 5, + 1–2 não-Anthropic.
+**Passos de juiz + montador — FEITOS (15/07, mesma sessão):**
+- `scoring/JUDGE.md` + `scoring/judge.schema.json` = interface dos passos 4–5 (matching C1/C2, iscas→PEN-004, rubrica EXPL às cegas, COMP). Juiz humano OU LLM preenche o veredito.
+- `harness/score.py` (passo 7) = montador determinístico: mecânico + veredito + matriz → scorecard de 1000 pts (toda a aritmética do SCORING: pontos por critério, normalização §4, COMP §5, penalidades, TOTAL §7, selo §8, Brier §9.1, dificuldade §9.2).
+- Validado de ponta a ponta contra cálculo à mão: run "forte" = **860/Gold** (SEC 216/ARCH 175/BUG 86/PERF 150/CLN 100, Brier 0.102, discovery 75); e a reescrita **mysqli→PDO = 0/Reprovada** (COMP 0 + PEN-002 −440 + C4/C5 zerados). Gate corrigido: C4/C5 só contam se C3 foi tentado.
+
+**Falta (próxima sessão) — só o #3:**
+- **Runs de referência (#3)** — rodar modelos DE VERDADE na LEB-100-A e passar o juiz. É o único passo que precisa de execução do modelo (o harness avalia entrega pronta; não faz inferência). Precisa: (a) driver que entrega `code/`+manifesto+enunciado ao modelo e coleta a entrega+relatório; (b) juiz (LLM com JUDGE.md ou humano); (c) 3 execuções → mediana (PROTOCOL §4). 1º lote sugerido: Opus 4.8, Sonnet 5, +1–2 não-Anthropic. Saída em `instances/LEB-100-A/runs/` (gitignored).
