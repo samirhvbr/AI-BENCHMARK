@@ -11,7 +11,7 @@
 ## TL;DR — onde paramos
 
 Comparamos o **LEB** (`~/x/AI-BENCHMARK`, nosso) com o **llm-coding-benchmark**
-(`~/x/llm-coding-benchmark`, clone limpo do repo público do Fabio Akita).
+(`~/x/000/akita/llm-coding-benchmark`, clone limpo do repo público do Fabio Akita).
 
 **Insight central:** os dois são **espelhos**.
 - **Akita → greenfield:** o modelo *constrói do zero* um app Rails fixo. Mede se
@@ -51,7 +51,7 @@ spec 1.1.0 + 1 instância validada e **zero runs**.
 6. calibração (Brier) + eixo de dificuldade (passo 6, mecânico)
 7. calcular scorecard normalizado (1000 pts) → emitir JSON válido no schema
 
-**Referência de arquitetura no repo do Akita** (`~/x/llm-coding-benchmark/`):
+**Referência de arquitetura no repo do Akita** (`~/x/000/akita/llm-coding-benchmark/`):
 - `scripts/run_benchmark.py` — entrypoint fino (CLI → config → delega)
 - `scripts/benchmark/runner.py` (~50KB) — process mgmt, execução de fases, **gates anti-zumbi** (timeout global 90min, no-progress kill 6min, tok/s mínimo)
 - `scripts/benchmark/config.py` — `BenchmarkConfig`
@@ -70,7 +70,7 @@ spec 1.1.0 + 1 instância validada e **zero runs**.
 
 **Estado do LEB:** ausente. **Estado do Akita:** mede tudo.
 
-O `result.json` do Akita (ex.: `~/x/llm-coding-benchmark/results/claude_opus_4_8/result.json`)
+O `result.json` do Akita (ex.: `~/x/000/akita/llm-coding-benchmark/results/claude_opus_4_8/result.json`)
 tem o formato pronto pra espelhar:
 - `elapsed_seconds`, `phases[]` (tempo por fase)
 - `tokens` = { input, output, cache, total }
@@ -113,7 +113,7 @@ calibração e dificuldade na 1.1.0. Candidato a virar a **v1.2.0** (MINOR, retr
 - `instances/LEB-100-A/private/verify/{probes.php,README.md}` · `private/matrix.{md,json}` (gabarito)
 - `matrix/matrix.schema.json`
 
-**Akita (`~/x/llm-coding-benchmark/`, só leitura — clone público de terceiro):**
+**Akita (`~/x/000/akita/llm-coding-benchmark/`, só leitura — clone público de terceiro):**
 - `scripts/run_benchmark.py` · `scripts/benchmark/{runner,config,backends,report}.py`
 - `scripts/analyze_results_runtime.py` · `scripts/browser_probe.mjs`
 - `results/claude_opus_4_8/result.json` (formato de custo/tempo)

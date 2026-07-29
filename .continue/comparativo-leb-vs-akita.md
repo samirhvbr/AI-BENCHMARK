@@ -2,7 +2,7 @@
 
 > **Registrado em:** 2026-07-14 · **Autor da análise:** sessão Claude Code
 > **Para que serve:** capturar de vez a comparação entre o **nosso** benchmark
-> (LEB / `~/x/AI-BENCHMARK`) e o do **Fabio Akita** (`~/x/llm-coding-benchmark`,
+> (LEB / `~/x/AI-BENCHMARK`) e o do **Fabio Akita** (`~/x/000/akita/llm-coding-benchmark`,
 > clone limpo do repo público dele), pra não refazer a análise.
 > **Plano de ação derivado disto:** ver [`retomada.md`](./retomada.md).
 
