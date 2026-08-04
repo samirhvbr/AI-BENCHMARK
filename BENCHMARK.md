@@ -7,21 +7,45 @@
 
 ---
 
+## Não quero ler este guia (o caminho curto)
+
+```sh
+./leb pacote LEB-100-A
+```
+
+Ele monta `runs/LEB-100-A/pacote/` — **essa** é a pasta que você manda para o agente, com o
+código, o manifesto e a `TAREFA.md` dentro. E escreve `runs/LEB-100-A/COMO-RODAR.md`: a receita
+do run com os caminhos já preenchidos, o que anotar e os comandos seguintes. Enquanto o agente
+trabalha, é esse arquivo que você lê — não este guia.
+
+Depois que ele devolver, em `runs/LEB-100-A/<modelo>-1/entrega/`:
+
+```sh
+./leb avaliar   LEB-100-A runs/LEB-100-A/<modelo>-1/entrega   # harness mecânico
+./leb scorecard LEB-100-A <modelo>-1 --veredito veredito.json # depois do juiz
+./leb estado                                                  # onde cada run parou
+```
+
+O resto deste documento explica **por quê** cada passo existe — leitura de uma vez só, não de
+toda vez.
+
+---
+
 ## TL;DR — o ciclo em uma frase
 
-Você entrega ao modelo **só o código legado + o manifesto público + um enunciado
-neutro**; ele devolve **relatório + código alterado + justificativa**; você mede
-essa entrega contra um **gabarito secreto** (a Matriz) com o harness + juiz e sai
+Você entrega ao modelo **só o código legado + o manifesto público + a tarefa
+canônica**; ele devolve **relatório + código alterado + achados estruturados**; você
+mede essa entrega contra um **gabarito secreto** (a Matriz) com o harness + juiz e sai
 um **scorecard de 0 a 1000**. Oficial = **mediana de 3 execuções**.
 
 ```text
    VOCÊ ENTREGA                    O MODELO DEVOLVE               VOCÊ AVALIA
 ┌────────────────────┐        ┌────────────────────────┐     ┌──────────────────┐
-│ code/              │        │ (a) relatório técnico  │     │ harness (mecânico)│
-│ manifest.md        │  ───►  │ (b) código alterado    │ ──► │ juiz (matriz+EXPL)│
-│ enunciado canônico │        │ (c) justificativa      │     │ score.py → 1000   │
+│ code/              │        │ (a) RELATORIO.md       │     │ harness (mecânico)│
+│ manifest.md        │  ───►  │ (b) code/ alterado     │ ──► │ juiz (matriz+EXPL)│
+│ TAREFA.md          │        │ (c) achados.json       │     │ score.py → 1000   │
 └────────────────────┘        └────────────────────────┘     └──────────────────┘
-        PÚBLICO                                                  usa private/ (gabarito)
+ ./leb pacote monta                                              usa private/ (gabarito)
 ```
 
 ---
@@ -40,7 +64,7 @@ Por isso a separação **público × privado** ([instances/README.md](instances/
 | --- | :---: | --- |
 | `code/` | ✅ **SIM** | o sistema legado com as falhas plantadas |
 | `manifest.md` | ✅ **SIM** | a superfície pública (o contrato que não pode quebrar) |
-| enunciado canônico ([PROTOCOL §2](protocol/PROTOCOL.md)) | ✅ **SIM** | a tarefa, em texto neutro e fixo |
+| `TAREFA.md` (de [protocol/TAREFA.md](protocol/TAREFA.md)) | ✅ **SIM** | a tarefa: enunciado neutro e fixo + o formato da entrega |
 | `characterization/` | ❌ **NÃO** | testes de compatibilidade — só o **avaliador** usa |
 | `private/matrix.json` · `matrix.md` | ❌ **NUNCA** | **o gabarito** (a matriz) |
 | `private/verify/` (probes/exploits) | ❌ **NUNCA** | roteiro de verificação por falha |
@@ -52,29 +76,51 @@ O modelo também **NÃO** recebe: dicas de categoria ("procure SQL injection"), 
 
 ## O que você manda para a IA (o ponto central)
 
-São **três coisas** — e só elas:
+São **duas coisas** — e só elas:
 
 ### 1. O pacote público (arquivos)
 
-Monte uma pasta limpa contendo **apenas** `code/` + `manifest.md`. Nunca copie a raiz
-da instância inteira (isso arrastaria `private/`).
+Um comando, a partir da raiz do repositório:
 
 ```sh
-# a partir da raiz da instância (ex.: instances/LEB-100-A/)
-rm -rf /tmp/leb-pkg && mkdir -p /tmp/leb-pkg
-cp -r code manifest.md /tmp/leb-pkg/
-
-# confira que NÃO há gabarito no pacote (a saída tem de ser vazia):
-find /tmp/leb-pkg \( -name 'matrix*' -o -path '*private*' -o -path '*verify*' -o -path '*characterization*' \) -print
+./leb pacote LEB-100-A                      # modo agêntico: --mode A --turnos 20
 ```
 
-Esse `/tmp/leb-pkg` é o **único** conteúdo de arquivos que o modelo pode enxergar.
+```text
+[pack] instância LEB-100-A v1.1 · spec 1.1.0 · tarefa 1.0.0 · modo S
+[pack] matriz  68088abd…c8625
+[pack] pacote  6d97bda5…ca44c  (7 arquivos) → runs/LEB-100-A/pacote
 
-### 2. O enunciado canônico (o texto da tarefa)
+Mande esta pasta para o agente:
+    runs/LEB-100-A/pacote
+```
 
-Fixo, **neutro** e não-parafraseável (traduzível, mas não reescrevível) — ele cita os
-eixos de avaliação **sem apontar nenhuma falha** ([PROTOCOL §2](protocol/PROTOCOL.md)).
-Cole exatamente isto:
+A pasta é sempre a mesma para a instância (`runs/<ID>/pacote/`) e é **refeita** a cada
+`./leb pacote` — não precisa lembrar de caminho nem limpar nada. É o **único** conteúdo de
+arquivos que o modelo pode enxergar.
+
+Por baixo, [`harness/pack.py`](harness/pack.py) copia `code/` + `manifest.md`, renderiza a
+`TAREFA.md` vinculada à instância e varre o resultado: se qualquer arquivo de gabarito cair no
+pacote, ele **apaga a pasta** e sai com erro — a rede de segurança que substitui o antigo
+`cp -r` + `find` manual. O pacote é determinístico: mesma instância + mesmo modo ⇒ mesmo
+`package_sha256`, em qualquer máquina. Guarde esse hash; ele entra no run (já vem preenchido
+no `COMO-RODAR.md`).
+
+### 2. A tarefa (já vai dentro do pacote)
+
+Antes, o enunciado era colado à mão no chat — e cada operador colava um pouquinho diferente.
+Agora ele viaja como `TAREFA.md` **dentro** do pacote, gerado de
+[`protocol/TAREFA.md`](protocol/TAREFA.md): mesma tarefa para toda instância, sem retrabalho e
+sem variação entre runs. A mensagem para o modelo pode ser só *"leia TAREFA.md e execute"*.
+
+A `TAREFA.md` tem três partes:
+
+**(a) O cabeçalho de vínculo** — instância, nível, versão, spec, hash da matriz e modo. É o que
+prova contra qual versão do caso o modelo trabalhou ([PROTOCOL §2.2](protocol/PROTOCOL.md)).
+
+**(b) O enunciado canônico** — fixo, **neutro** e não-parafraseável (traduzível, mas não
+reescrevível); cita os eixos de avaliação **sem apontar nenhuma falha**
+([PROTOCOL §2](protocol/PROTOCOL.md)):
 
 > Você é responsável pela manutenção deste sistema legado em produção. Ele possui
 > consumidores externos que dependem do comportamento atual, conforme o manifesto de
@@ -98,11 +144,22 @@ defesas anti-gaming do padrão ([PROTOCOL §6](protocol/PROTOCOL.md)). A **confi
 0 a 100** por achado é deliberadamente neutra (não revela nada da matriz) e só
 alimenta a métrica de calibração, que **não** entra nos 1000 pontos ([SPEC §8.1](SPEC.md)).
 
+**(c) O contrato de entrega** — os nomes e o formato dos artefatos que você espera de volta:
+`code/` alterado in-place, `RELATORIO.md` (prosa, com mecanismo e confiança por achado) e
+`achados.json` (índice estruturado: arquivo, linha, categoria, severidade, confiança). Isso
+existe para o **passo 5** não virar arqueologia: com linha e arquivo declarados, o matching
+contra a matriz é direto ([PROTOCOL §2.1](protocol/PROTOCOL.md)).
+
+O contrato é **descritivo**: não cria critério, bônus nem penalidade, e não menciona iscas,
+falsos positivos nem contagem de falhas — mencionar mudaria o comportamento do modelo e
+vazaria a estratégia anti-gaming. Entrega sem `achados.json` continua válida; só dá mais
+trabalho ao juiz.
+
 ### 3. Nada mais
 
 Sem system prompt que injete pistas, sem "dica de amigo", sem link para este
 repositório (o repo tem a taxonomia e o formato da matriz). Se o modelo tiver
-ferramentas de leitura (modo agêntico), aponte-as **só** para `/tmp/leb-pkg` — nunca
+ferramentas de leitura (modo agêntico), aponte-as **só** para `runs/<ID>/pacote/` — nunca
 para a árvore da instância, senão ele pode `ler private/`.
 
 ---
@@ -129,21 +186,31 @@ resultado publicado e prova qual gabarito foi usado.
 
 ### Passo 2 — Montar o pacote público
 
-Exatamente como na seção acima ("O que você manda para a IA" → item 1). Rode o `find`
-de conferência; ele **tem** de sair vazio.
+```sh
+./leb pacote LEB-100-A
+```
+
+Sai em `runs/LEB-100-A/pacote/`, junto de um `COMO-RODAR.md` com a receita deste run
+(caminhos, o que anotar, comandos seguintes) — daqui em diante é ele que você lê.
 
 ### Passo 3 — Entregar ao modelo e coletar a entrega
 
-Entregue **pacote público + enunciado canônico**. Registre os parâmetros obrigatórios
-do run ([PROTOCOL §3](protocol/PROTOCOL.md)): modelo + versão exata, temperatura (oficial
-= a default do provedor, registrada), modo S/A, orçamento de turnos/tokens, data,
-instância + versão + hash da matriz.
+Entregue a pasta `pacote/` — a tarefa já está dentro dela, como `TAREFA.md`. A mensagem pode
+ser só *"leia o TAREFA.md e execute"*. Registre os parâmetros obrigatórios do run
+([PROTOCOL §3](protocol/PROTOCOL.md)): modelo + versão exata, temperatura (oficial = a default
+do provedor, registrada), modo S/A, orçamento de turnos/tokens, data, instância + versão +
+hash da matriz + `package_sha256` — a tabela do `COMO-RODAR.md` já vem com os três últimos
+preenchidos.
 
-Colete a **entrega** completa:
-- **(a)** relatório técnico (com a confiança 0–100 por achado);
-- **(b)** o `code/` alterado — o modelo edita o legado *in-place*; você quer a pasta
-  `code/` completa de volta;
-- **(c)** a justificativa (inclusive o que ele decidiu **não** mudar).
+Guarde a **entrega** em `runs/<ID>/<modelo>-<n>/entrega/`, nos nomes que a tarefa pediu:
+- **`RELATORIO.md`** — os achados explicados (mecanismo, severidade, confiança 0–100) e a
+  seção de decisões, com o que ele resolveu **não** mudar;
+- **`code/`** — o legado alterado *in-place*; você quer a pasta completa de volta;
+- **`achados.json`** — o índice estruturado ([schema](scoring/achados.schema.json)). Confira o
+  bloco `leb`: se o vínculo divergir do pacote que você mandou, o run não é comparável.
+
+Uma pasta por execução (`-1`, `-2`, `-3`): são 3 execuções independentes, sem retry seletivo.
+O `./leb avaliar` do passo seguinte já valida o `achados.json` e avisa se faltar relatório.
 
 Guarde os **logs completos** (prompts, respostas, chamadas de ferramenta) junto do
 resultado ([PROTOCOL §4](protocol/PROTOCOL.md)).
@@ -154,12 +221,12 @@ Roda os passos objetivos e re-executáveis do pipeline (caracterização antes/d
 probes de correção, cobertura por dificuldade, timing) e cospe um relatório JSON:
 
 ```sh
-python3 harness/leb_harness.py \
-    --instance   instances/LEB-100-A \
-    --submission /caminho/para/o/code_devolvido \
-    --out        instances/LEB-100-A/runs/<modelo>.mech.json
+./leb avaliar LEB-100-A runs/LEB-100-A/<modelo>-1/entrega
+# → runs/LEB-100-A/<modelo>-1/mecanico.json
 ```
 
+Equivale a `python3 harness/leb_harness.py --instance … --submission … --out …`, com os
+caminhos resolvidos e a entrega conferida antes (JSON válido? tem relatório?).
 A entrega é montada **read-only** no container; nada é copiado para dentro do repo.
 **Exit 2** = a entrega regrediu (quebrou caracterização → sinal para CI); **exit 0** =
 sem regressão. Detalhes e contrato de saída em [`harness/README.md`](harness/README.md).
@@ -186,11 +253,8 @@ Determinístico: junta mecânico + veredito + matriz e aplica toda a aritmética
 COMP, penalidades, TOTAL, selo, Brier, eixo de dificuldade):
 
 ```sh
-python3 harness/score.py \
-    --matrix     instances/LEB-100-A/private/matrix.json \
-    --mechanical instances/LEB-100-A/runs/<modelo>.mech.json \
-    --judge      instances/LEB-100-A/runs/<modelo>.judge.json \
-    --out        instances/LEB-100-A/runs/<modelo>.scorecard.json
+./leb scorecard LEB-100-A <modelo>-1 --veredito runs/LEB-100-A/<modelo>-1/veredito.json
+# → runs/LEB-100-A/<modelo>-1/scorecard.json      (opcional: --custo cost_time.json)
 ```
 
 Saída no formato de [`scoring/scorecard-template.md`](scoring/scorecard-template.md)
@@ -202,26 +266,34 @@ cobertura por dificuldade e `cost_time` (tokens, tok/s, US$/run, wall-clock).
 Um **run oficial = 3 execuções independentes**; a nota oficial é a **mediana do
 TOTAL** (registrando as 3). **Proibido retry seletivo**: descartar uma execução ruim e
 rodar de novo invalida o run ([PROTOCOL §4](protocol/PROTOCOL.md)). Repita os passos
-3–6 três vezes.
+3–6 três vezes — `./leb estado` mostra onde cada uma parou:
+
+```text
+LEB-100-A  (runs/LEB-100-A)
+  pacote     montado
+  opus5-1    mecânico · scorecard  TOTAL 860
+  opus5-2    mecânico · —
+```
 
 ### Passo 8 — Publicar
 
 O resultado publicado **DEVE** conter ([PROTOCOL §7](protocol/PROTOCOL.md)): scorecard
 (`.md` + `.json`), os parâmetros do Passo 3, o **hash da matriz**, os logs e a **versão
 da spec**. Comparações entre modelos só valem **na mesma instância e mesmo protocolo**.
-As pastas `instances/*/runs/` são **gitignored** — os scorecards não sobem para o repo
-público junto do código.
+A pasta `runs/` inteira é **gitignored** — pacotes, entregas e scorecards não sobem para o
+repo público junto do código.
 
 ---
 
 ## Checklist anti-vazamento (antes de apertar "enviar")
 
-- [ ] O pacote tem **só** `code/` + `manifest.md`? (rodei o `find` e saiu vazio)
+- [ ] O pacote saiu do `./leb pacote` (sem erro) e tem **só** `code/` + `manifest.md` + `TAREFA.md`?
+- [ ] Mandei a pasta `runs/<ID>/pacote/` — e **não** a pasta `runs/<ID>/`, que tem o `COMO-RODAR.md`?
 - [ ] **Nenhum** arquivo `matrix*`, `private/`, `verify/` ou `characterization/` no que o modelo vê?
-- [ ] O enunciado é o **canônico**, sem dica de categoria e sem contagem de falhas?
+- [ ] A `TAREFA.md` do pacote é a gerada — **não** editei o texto para "ajudar" o modelo?
 - [ ] Sem system prompt / contexto extra injetando pistas?
 - [ ] Em modo agêntico: as ferramentas de leitura estão **presas ao pacote**, sem acesso à instância nem a este repo?
-- [ ] Anotei modelo+versão, temperatura, modo, orçamento, data e **hash da matriz**?
+- [ ] Anotei modelo+versão, temperatura, modo, orçamento, data, **hash da matriz** e **`package_sha256`**?
 
 ---
 
@@ -245,23 +317,20 @@ Estas não são bugs do processo — são o teste funcionando. Não "ajude" o mo
 ## Referência rápida de comandos
 
 ```sh
-# 1) montar pacote público (a partir da raiz da instância)
-rm -rf /tmp/leb-pkg && mkdir -p /tmp/leb-pkg && cp -r code manifest.md /tmp/leb-pkg/
-find /tmp/leb-pkg \( -name 'matrix*' -o -path '*private*' -o -path '*verify*' \) -print   # deve sair VAZIO
+# 1) montar o pacote (code/ + manifest.md + TAREFA.md, com anti-vazamento embutido)
+./leb pacote LEB-100-A                    # → runs/LEB-100-A/pacote/ + COMO-RODAR.md
 
-# 2) (você entrega /tmp/leb-pkg + enunciado canônico ao modelo e coleta a entrega)
+# 2) (você manda runs/LEB-100-A/pacote/ ao agente — a tarefa está dentro — e salva a
+#     entrega em runs/LEB-100-A/<modelo>-1/entrega/: code/ + RELATORIO.md + achados.json)
 
 # 3) avaliação mecânica
-python3 harness/leb_harness.py --instance instances/LEB-100-A \
-    --submission /caminho/code_devolvido --out instances/LEB-100-A/runs/<modelo>.mech.json
+./leb avaliar LEB-100-A runs/LEB-100-A/<modelo>-1/entrega
 
 # 4) juiz → veredito JSON (segue scoring/JUDGE.md)
 
 # 5) scorecard final de 1000 pontos
-python3 harness/score.py --matrix instances/LEB-100-A/private/matrix.json \
-    --mechanical instances/LEB-100-A/runs/<modelo>.mech.json \
-    --judge instances/LEB-100-A/runs/<modelo>.judge.json \
-    --out instances/LEB-100-A/runs/<modelo>.scorecard.json
+./leb scorecard LEB-100-A <modelo>-1 --veredito runs/LEB-100-A/<modelo>-1/veredito.json
 
 # repetir 2–5 três vezes → nota oficial = mediana do TOTAL
+./leb estado LEB-100-A
 ```

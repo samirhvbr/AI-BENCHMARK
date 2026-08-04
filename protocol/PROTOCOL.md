@@ -6,9 +6,20 @@ Normativo. Define como rodar o benchmark de forma justa e reproduzível. Resulta
 
 ## 1. O que o modelo recebe
 
-1. O código da instância (`code/`), o manifesto de superfície pública (`manifest.md`) e **nada de `private/`**.
-2. O **enunciado canônico** (§2) — sempre o mesmo texto, sem adaptações por modelo.
+O **pacote público**, e só ele — três itens, montados por [`../harness/pack.py`](../harness/pack.py):
+
+1. O código da instância (`code/`) e o manifesto de superfície pública (`manifest.md`); **nada de `private/`**.
+2. `TAREFA.md` — o enunciado canônico (§2) mais o contrato de entrega (§2.1), renderizado de [`TAREFA.md`](TAREFA.md) e **vinculado à instância** (§2.2).
 3. Nos níveis 300+, acesso de leitura ao repositório via ferramentas (listar/ler arquivos), registrado em log.
+
+```sh
+./leb pacote LEB-100-A                      # → runs/LEB-100-A/pacote/  (modo S)
+./leb pacote LEB-100-A --mode A --turnos 20 # modo agêntico
+```
+
+O empacotador aborta se qualquer arquivo de gabarito cair no pacote, e imprime o `package_sha256`
+— o pacote é determinístico (mesma instância + mesmo modo ⇒ bytes idênticos), então esse hash
+identifica exatamente o que o modelo recebeu e **DEVERIA** ser registrado no run.
 
 O modelo **NÃO** recebe: a matriz, os testes de `private/verify/`, dicas de categoria ("procure SQL injection"), nem contagem de falhas.
 
@@ -27,6 +38,37 @@ O texto abaixo é fixo (traduzível, mas não parafraseável). Ele é deliberada
 
 A confiança por achado (item 1) é **neutra** — não revela nada da matriz — e alimenta a métrica de calibração (`../scoring/SCORING.md §9.1`), que **não** afeta os 1000 pontos.
 
+### 2.1 Contrato de entrega
+
+O enunciado diz *o que* fazer; o contrato de entrega diz *em que formato devolver*, para que o
+passo 4 do pipeline (§5) não dependa de adivinhar a estrutura da resposta. Ele vive na mesma
+[`TAREFA.md`](TAREFA.md) e pede três artefatos:
+
+| Artefato | Papel na avaliação |
+| --- | --- |
+| `code/` alterado in-place | passos 1–3 (mecânicos): COMP, caracterização, probes |
+| `RELATORIO.md` | passos 4–5: mecanismo por achado (C2/R2) e rubrica EXPL |
+| `achados.json` | passo 4: índice estruturado (arquivo, linha, categoria, severidade, confiança) que torna o matching localizável — formato em `../scoring/achados.schema.json` |
+
+O contrato é **descritivo, não pontuável**: ele padroniza a forma da entrega e não cria critério,
+bônus nem penalidade. Entrega sem `achados.json` continua válida — o juiz faz o matching a partir
+do `RELATORIO.md`, com mais trabalho e mais variância. O contrato também **NÃO DEVE** mencionar
+iscas, falsos positivos, contagem de falhas ou qualquer consequência de pontuação: isso mudaria o
+comportamento do modelo e vazaria a estratégia anti-gaming (§6).
+
+### 2.2 Vínculo com a instância
+
+A `TAREFA.md` entregue abre com um cabeçalho que amarra a tarefa ao caso avaliado: instância,
+nível, versão da instância, versão da spec, **SHA-256 da matriz** e modo de execução. O empacotador
+tira esses dados do cabeçalho de `private/matrix.json` (nunca das falhas). O modelo copia o mesmo
+bloco para dentro do `achados.json` — entrega cujo vínculo diverge foi feita contra outra versão da
+instância e **não é** comparável às demais.
+
+Consequência para quem escreve instâncias novas: o enunciado e o contrato de entrega **NÃO DEVEM**
+ser reescritos dentro da instância. A instância declara o seu contrato de sistema no `manifest.md`;
+a tarefa é do padrão, e é a mesma para LEB-100-A, LEB-300-B e todas as futuras. Um enunciado por
+instância destruiria a comparabilidade entre modelos e entre casos.
+
 ## 3. Modos de execução
 
 | Modo | Descrição | Uso |
@@ -34,7 +76,7 @@ A confiança por achado (item 1) é **neutra** — não revela nada da matriz �
 | **S** (single-turn) | 1 prompt → 1 resposta | LEB-100/200; mede capacidade bruta |
 | **A** (agêntico) | multi-turno com ferramentas de leitura/execução, orçamento de N turnos declarado | LEB-300+; mede engenharia de verdade |
 
-Parâmetros obrigatórios do run: modelo + versão exata, temperatura (oficial: a default do provedor, registrada), modo S/A, orçamento de turnos/tokens, data, instância + versão + hash da matriz.
+Parâmetros obrigatórios do run: modelo + versão exata, temperatura (oficial: a default do provedor, registrada), modo S/A, orçamento de turnos/tokens, data, instância + versão + hash da matriz + `package_sha256` do pacote entregue (§1).
 
 ## 4. Reprodutibilidade
 
@@ -45,7 +87,7 @@ Parâmetros obrigatórios do run: modelo + versão exata, temperatura (oficial: 
 ## 5. Pipeline de avaliação
 
 ```text
-entrega do modelo
+entrega do modelo  (code/ + RELATORIO.md + achados.json — §2.1)
    │
    ├─ 1. diff da superfície pública ──────────► violações COMP-* (mecânico)
    ├─ 2. testes de caracterização (antes/depois) ► C4 regressão, PEN-002 (mecânico)
@@ -58,7 +100,7 @@ entrega do modelo
 
 O avaliador humano (ou LLM-juíza com rubrica) só atua nos passos 4–5; todo o resto é mecânico e re-executável por terceiros. O passo 6 (calibração e cobertura por dificuldade) é derivado dos passos 3–4 e **não** entra no TOTAL.
 
-**Ferramentas:** os passos mecânicos 1–3 e 6 rodam em [`../harness/leb_harness.py`](../harness/leb_harness.py) (relatório mecânico JSON); os passos 4–5 seguem [`../scoring/JUDGE.md`](../scoring/JUDGE.md) e produzem um veredito (`../scoring/judge.schema.json`); o passo 7 é o montador [`../harness/score.py`](../harness/score.py), que junta mecânico + veredito + matriz e emite o scorecard oficial.
+**Ferramentas:** o pacote entregue ao modelo sai de [`../harness/pack.py`](../harness/pack.py) (§1); os passos mecânicos 1–3 e 6 rodam em [`../harness/leb_harness.py`](../harness/leb_harness.py) (relatório mecânico JSON); os passos 4–5 seguem [`../scoring/JUDGE.md`](../scoring/JUDGE.md) e produzem um veredito (`../scoring/judge.schema.json`); o passo 7 é o montador [`../harness/score.py`](../harness/score.py), que junta mecânico + veredito + matriz e emite o scorecard oficial.
 
 ## 6. Anti-gaming
 

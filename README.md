@@ -4,7 +4,7 @@
 
 🇧🇷 [Versão em português](README_br.md)
 
-**A Software Engineering evaluation standard for LLMs.** Spec version: **1.2.0**.
+**A Software Engineering evaluation standard for LLMs.** Spec version: **1.3.0**.
 
 LEB is not a prompt benchmark and does not measure who writes the prettiest code. It measures **who can evolve a legacy system without breaking it** — finding real flaws, fixing them, preserving compatibility, and explaining decisions like a senior engineer would.
 
@@ -14,7 +14,7 @@ Existing benchmarks measure greenfield code generation or isolated issue-solving
 
 ## How it works (60 seconds)
 
-1. The model receives a **real legacy system** (with planted flaws) + a fixed, neutral task statement.
+1. The model receives a **real legacy system** (with planted flaws) + the [canonical task](protocol/TAREFA.md) — neutral statement plus delivery format, identical across instances.
 2. It reports, fixes and justifies — without knowing which or how many flaws exist.
 3. The submission is checked against the **[Official Failure Matrix](matrix/MATRIX.md)** — a hidden answer key stating exactly what exists (and what is a decoy). This is what makes the evaluation objective, reproducible and comparable across LLMs: we verify exactly which flaws the model found, fixed, ignored — and which ones it *invented*.
 4. Out comes a **[scorecard](scoring/scorecard-template.md)** from 0 to 1000.
@@ -60,6 +60,8 @@ Raw category points are normalized to the official weights, so **every instance 
 | [matrix/MATRIX.md](matrix/MATRIX.md) | **Official Failure Matrix** — construction, decoys, hash-based concealment |
 | [levels/LEVELS.md](levels/LEVELS.md) | LEB-100 (~300 lines) → LEB-500 (~20,000 lines) |
 | [protocol/PROTOCOL.md](protocol/PROTOCOL.md) | Canonical statement, S/A modes, 3 runs → median, anti-gaming |
+| [protocol/TAREFA.md](protocol/TAREFA.md) | The task handed to the model: neutral statement + delivery contract, identical across instances |
+| [`leb`](leb) + [harness/](harness/) | The operator command (`pacote` · `avaliar` · `scorecard` · `estado`) and the tools it drives |
 | `*/**.schema.json` | Machine-readable formats for matrix and scorecard |
 
 Note: the specification documents are currently written in Portuguese (pt-BR); English translations are planned.
@@ -67,13 +69,14 @@ Note: the specification documents are currently written in Portuguese (pt-BR); E
 ## Running it
 
 1. Pick a current (non-retired) instance and its level.
-2. Give the model `code/` + `manifest.md` + the canonical statement ([protocol/PROTOCOL.md §2](protocol/PROTOCOL.md)) — never anything from `private/`.
-3. Run 3 independent executions; the official score is the median total.
+2. `./leb pacote <ID>` builds `runs/<ID>/pacote/` — `code/` + `manifest.md` + the [canonical task](protocol/TAREFA.md), never anything from `private/`. Hand **that folder** to the agent; the run recipe is generated at `runs/<ID>/COMO-RODAR.md`.
+3. Run 3 independent executions (`./leb avaliar` + `./leb scorecard` each); the official score is the median total.
 4. Evaluate: public-surface diff → characterization tests → per-flaw verifies → report×matrix matching → explanation rubric → scorecard (`.md` + `.json`), plus informative **calibration** (confidence per finding) and **difficulty** coverage that don't touch the 1000 points.
 
 ## Status
 
-- [x] Specification 1.2.0 (this repository) — calibration + difficulty axis (§8.1–8.2), cost/time block (§8.3), non-scoring
+- [x] Specification 1.3.0 (this repository) — canonical task shipped inside the package + delivery contract (`PROTOCOL §2.1–2.2`), calibration + difficulty axis (§8.1–8.2), cost/time block (§8.3), non-scoring
+- [x] **Packager** ([`harness/pack.py`](harness/pack.py)) — builds `code/` + `manifest.md` + an instance-bound [`TAREFA.md`](protocol/TAREFA.md), with leak scanning and a deterministic `package_sha256`
 - [x] First instance: **[LEB-100-A](instances/LEB-100-A/)** v1.1 — PHP legacy code, 13 planted flaws + 2 decoys, private matrix, characterization + verify probes (validated live: characterization 22/22 green on both pristine and fixed code; probes flip PLANTADA→CORRIGIDA)
 - [x] Evaluation **harness** ([`harness/`](harness/)) — mechanical pipeline (characterization before/after + probes + difficulty coverage → JSON), stdlib-only, instance-agnostic; validated both ways on LEB-100-A
 - [x] Scorecard **assembler** ([`harness/score.py`](harness/score.py)) + **judge interface** ([`scoring/JUDGE.md`](scoring/JUDGE.md), `judge.schema.json`) — deterministic 1000-pt scorecard from mechanical evidence + judge verdict; validated end-to-end (incl. the mysqli→PDO rewrite scoring 0/Reprovada, and a Gold run at 860)

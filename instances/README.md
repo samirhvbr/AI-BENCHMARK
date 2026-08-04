@@ -21,7 +21,15 @@ LEB-<nível>-<letra>/
     └── verify/               roteiro de verificação por falha (exploits, probes)
 ```
 
-Público × privado (MATRIX.md §4): o pacote que a IA recebe é **apenas** `code/` + `manifest.md` (+ o enunciado canônico do [`PROTOCOL.md §2`](../protocol/PROTOCOL.md)). `characterization/` é público mas usado pelo avaliador. `private/` **nunca** é entregue nem publicado no mesmo lugar do código — só o SHA-256 de `matrix.json` é divulgado no lançamento.
+Público × privado (MATRIX.md §4): o pacote que a IA recebe é **apenas** `code/` + `manifest.md` + a `TAREFA.md` gerada — montado por [`../harness/pack.py`](../harness/pack.py). `characterization/` é público mas usado pelo avaliador. `private/` **nunca** é entregue nem publicado no mesmo lugar do código — só o SHA-256 de `matrix.json` é divulgado no lançamento.
+
+> **A instância não escreve a tarefa.** Repare que não há enunciado nesta árvore: a tarefa
+> (enunciado canônico + contrato de entrega) vive só em [`../protocol/TAREFA.md`](../protocol/TAREFA.md)
+> e é idêntica em todas as instâncias — é o que mantém os resultados comparáveis entre casos e
+> entre modelos ([`SPEC.md §9.4`](../SPEC.md)). O que a instância declara é o contrato **do
+> sistema**, no `manifest.md`. Instância nova não ganha enunciado próprio, nem "só um parágrafo
+> extra de instrução": se algo falta para todo mundo, muda-se `protocol/TAREFA.md` (e sobe a
+> versão da tarefa).
 
 ## Roteiro — construir uma instância
 
@@ -29,19 +37,20 @@ Público × privado (MATRIX.md §4): o pacote que a IA recebe é **apenas** `cod
 2. **Escrever o código** de forma que pareça manutenção real — não um campo minado óbvio.
 3. **Plantar as falhas** da [taxonomia](../taxonomy/), cada uma atribuível a uma linha, sem sobreposição (MATRIX.md §3).
 4. **Adicionar iscas** (10–20% da matriz): falhas *plausíveis* que **não** existem.
-5. **Declarar a superfície pública** no `manifest.md` (o que corrigir não pode quebrar).
+5. **Declarar a superfície pública** no `manifest.md` (o que corrigir não pode quebrar) — só o contrato do sistema; nada de instrução de tarefa, que é do padrão.
 6. **Escrever a caracterização**: trava contratos públicos, **não** congela as falhas.
 7. **Escrever a matriz** (`private/`) com localização, severidade, correção esperada e `verify`.
 8. **Validar**: o código roda, a caracterização passa no legado intocado, cada `verify` reproduz sua falha.
-9. **Congelar e versionar**: publicar o hash de `matrix.json`; instância vira imutável.
+9. **Empacotar de teste**: `./leb pacote <ID>` tem de sair sem erro — é o que prova que a instância monta um pacote limpo e que o vínculo (id, nível, versão, spec, hash) está correto na matriz.
+10. **Congelar e versionar**: publicar o hash de `matrix.json`; instância vira imutável.
 
 ## Roteiro — avaliar um modelo numa instância
 
 Segue o pipeline do [`PROTOCOL.md §5`](../protocol/PROTOCOL.md):
 
 ```text
-1. Entregar code/ + manifest.md + enunciado canônico   (nunca private/)
-2. Coletar a entrega: relatório + código alterado + justificativa
+1. ./leb pacote <ID> → runs/<ID>/pacote/                (nunca private/)
+2. Coletar a entrega: RELATORIO.md + code/ + achados.json
 3. diff da superfície pública ........► violações COMP-*         (mecânico)
 4. characterization/ antes vs depois .► regressão C4 / PEN-002    (mecânico)
 5. private/verify/ por falha .........► corrigiu de fato C3/R3    (mecânico)

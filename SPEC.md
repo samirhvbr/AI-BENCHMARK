@@ -1,6 +1,6 @@
 # LEB — LLM Engineering Benchmark
 
-**Especificação Técnica** · Versão **1.2.0** · Status: **Rascunho normativo**
+**Especificação Técnica** · Versão **1.3.0** · Status: **Rascunho normativo**
 
 ---
 
@@ -39,8 +39,11 @@ Corolário central: **reescrever tudo do zero não é engenharia, é fuga** — 
 | [`matrix/MATRIX.md`](matrix/MATRIX.md) | **Matriz Oficial de Falhas** — o gabarito oculto (coração do benchmark) |
 | [`levels/LEVELS.md`](levels/LEVELS.md) | Níveis LEB-100 a LEB-500 |
 | [`protocol/PROTOCOL.md`](protocol/PROTOCOL.md) | Protocolo de execução e reprodutibilidade |
+| [`protocol/TAREFA.md`](protocol/TAREFA.md) | **Tarefa canônica** entregue ao modelo: enunciado neutro + contrato de entrega, igual em toda instância |
 | [`scoring/JUDGE.md`](scoring/JUDGE.md) | Protocolo do juiz (passos 4–5): matching e rubrica EXPL |
-| [`harness/`](harness/) | Ferramentas: `leb_harness.py` (mecânico) + `score.py` (montador do scorecard) |
+| `scoring/achados.schema.json` | Formato do índice estruturado de achados que acompanha a entrega |
+| [`harness/`](harness/) | Ferramentas: `pack.py` (pacote público) + `leb_harness.py` (mecânico) + `score.py` (montador do scorecard) |
+| `leb` | Comando do operador: `pacote` · `avaliar` · `scorecard` · `estado`; orquestra o `harness/` e organiza tudo em `runs/<instância>/` |
 | `scoring/scorecard-template.md` | Scorecard oficial de resultado |
 
 ---
@@ -211,14 +214,26 @@ Falta só **executar modelos de verdade** para gerar os primeiros scorecards de 
 1. IDs da taxonomia são **imutáveis** — nunca renumerar; depreciar e criar novo ID.
 2. A matriz de uma instância publicada **NÃO DEVE** mudar; erros exigem nova versão da instância.
 3. O enunciado dado ao modelo é **fixo e neutro** (`protocol/PROTOCOL.md §2`) — não pode vazar dicas da matriz.
-4. Todo resultado publicado **DEVE** citar: versão da spec, ID+hash da instância, protocolo do run (turnos, ferramentas, temperatura) e scorecard JSON.
-5. Comparações entre modelos só são válidas **na mesma instância e mesmo protocolo**.
+4. A tarefa (enunciado + contrato de entrega) é **do padrão, não da instância**: vive só em `protocol/TAREFA.md` e **NÃO DEVE** ser reescrita, parafraseada ou estendida dentro de uma instância (`protocol/PROTOCOL.md §2.2`). Instância declara contrato de sistema (`manifest.md`); padrão declara tarefa.
+5. O contrato de entrega é **descritivo**: padroniza a forma da resposta e não cria critério, bônus nem penalidade — mudar formato de entrega não muda pontuação.
+6. Todo resultado publicado **DEVE** citar: versão da spec, ID+hash da instância, protocolo do run (turnos, ferramentas, temperatura) e scorecard JSON.
+7. Comparações entre modelos só são válidas **na mesma instância e mesmo protocolo**.
 
 ---
 
 ## 10. Versionamento
 
 A spec segue **SemVer**: MAJOR muda pontuação/regras; MINOR adiciona falhas/níveis; PATCH corrige texto. Instâncias são versionadas separadamente (`LEB-200-A v1.2`).
+
+### Notas da versão 1.3.0
+
+Sem mudança em pontos, IDs ou matrizes (por isso MINOR; instâncias 1.1.0/1.2.0 seguem válidas sem alteração):
+
+- **Tarefa canônica** (`protocol/TAREFA.md`) — o enunciado neutro do `PROTOCOL §2` passa a viajar **dentro do pacote**, junto de `code/` + `manifest.md`, em vez de ser colado à mão pelo operador. Fonte única: o arquivo é do padrão e é o mesmo para todas as instâncias, presentes e futuras (§9.4).
+- **Contrato de entrega** (`PROTOCOL §2.1`) — a tarefa declara os artefatos esperados: `code/` in-place, `RELATORIO.md` e o novo `achados.json` (`scoring/achados.schema.json`), que dá localização, categoria, severidade e confiança por achado. Descritivo, não pontuável (§9.5): torna o matching do passo 4 localizável sem mexer na aritmética do scorecard.
+- **Vínculo do pacote** (`PROTOCOL §2.2`) — a `TAREFA.md` entregue carrega instância, versão, spec, hash da matriz e modo; o modelo repete o bloco no `achados.json`. Entrega com vínculo divergente não é comparável.
+- **Empacotador** (`harness/pack.py`) — monta o pacote público, renderiza a tarefa, roda a varredura anti-vazamento e emite um `package_sha256` determinístico, agora entre os parâmetros do run (`PROTOCOL §3`).
+- **Comando do operador** (`leb`) — um ciclo, quatro subcomandos, uma área de trabalho por instância (`runs/<ID>/`, com `pacote/` sendo a única pasta entregável). Conveniência: não altera nada de normativo.
 
 ### Notas da versão 1.2.0
 

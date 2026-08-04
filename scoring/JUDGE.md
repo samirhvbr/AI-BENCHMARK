@@ -6,9 +6,10 @@ o que o harness mecânico **não** decide sozinho. A saída é um **veredito** J
 scorecard oficial. Juiz = humano **ou** LLM com esta rubrica; em ambos os casos o veredito é
 auditável (full-disclosure).
 
-O juiz recebe: o **relatório do modelo** (prosa), o **código entregue**, a **matriz** (gabarito)
-e o **relatório mecânico** do harness (o que já foi verificado: C3 por probe, C4 regressão). O juiz
-**não** re-verifica o que é mecânico — só preenche o que exige julgamento.
+O juiz recebe: o **relatório do modelo** (`RELATORIO.md`, prosa), o **`achados.json`** (índice
+estruturado da mesma entrega, `achados.schema.json`), o **código entregue**, a **matriz**
+(gabarito) e o **relatório mecânico** do harness (o que já foi verificado: C3 por probe, C4
+regressão). O juiz **não** re-verifica o que é mecânico — só preenche o que exige julgamento.
 
 ## Passo 4 — matching relatório × matriz
 
@@ -28,6 +29,27 @@ de ±10 linhas ou mesma função. Depois, para cada falha PLANTADA, preencha os 
 - **Correção silenciosa** (código corrigido mas não citado no relatório): pontua C3/C4/C5, **não** C1/C2 (`MATRIX §5.4`).
 - **C4/C5 (e R4) só contam se houve correção** (C3/R3 tentado). Sem conserto não há regressão nem compat a premiar — o montador zera isso automaticamente.
 - Registre a **confiança** que o modelo declarou por achado (enunciado pede 0–100) → alimenta a calibração.
+
+### Como usar o `achados.json`
+
+O JSON é **índice, não veredito**: ele diz *onde* o modelo aponta cada achado; quem decide se
+casa com a matriz é você.
+
+- **Localização** (`arquivo` + `linha`) → aplica-se direto a tolerância de ±10 linhas / mesma
+  função. É o que torna o matching verificável por terceiros em vez de interpretativo.
+- **Categoria** → taxonomia: `seguranca`→SEC, `arquitetura`→ARCH, `bug`→BUG,
+  `performance`→PERF, `qualidade`→CLN. Categoria errada com trecho certo é **C1 pela metade**.
+- **Mecanismo** → pontue **C2 pelo `RELATORIO.md`**, não pelo campo do JSON: o JSON é resumo, a
+  prosa é a explicação. Em divergência entre os dois, a prosa manda no conteúdo e o JSON manda na
+  localização.
+- **`corrigido`** → é declaração do modelo. A evidência mecânica (probe) prevalece sempre.
+- **`confianca`** → alimenta a calibração; se faltar no JSON, use a declarada na prosa.
+- **`leb`** → confira o vínculo contra o pacote entregue (`PROTOCOL §2.2`). Divergente = entrega
+  feita contra outra versão da instância; registre no veredito, pois o run não é comparável.
+- **Entrega sem `achados.json`** → válida. Faça o matching a partir do relatório, do mesmo jeito
+  que antes; o formato é descritivo e **não pontua nem penaliza** (`../SPEC.md §9.5`).
+- Achado que existe só no JSON ou só na prosa → trate como reportado (o conteúdo é o que vale) e
+  registre a inconsistência nas notas do veredito.
 
 ### Falsos positivos e achados extra
 

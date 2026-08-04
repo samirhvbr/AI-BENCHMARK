@@ -7,7 +7,10 @@
 .env.*
 *.local.php
 
-# Resultados de runs do harness (grandes; scorecards oficiais publicados à parte)
+# Área de trabalho dos runs: pacotes montados, entregas dos modelos, relatórios
+# mecânicos e scorecards. Tudo derivado — nada aqui é fonte (os scorecards oficiais
+# publicados vão à parte).
+/runs/
 instances/*/runs/
 
 # Python

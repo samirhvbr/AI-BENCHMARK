@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://leb.dev/schemas/achados.schema.json",
+  "title": "LEB — achados estruturados da entrega do modelo",
+  "description": "Índice estruturado que a entrega do modelo traz junto do RELATORIO.md, conforme protocol/TAREFA.md §5. É o insumo do passo 4 do pipeline (matching relatório × matriz, PROTOCOL §5). Validar não pontua nem penaliza: entrega sem este arquivo é avaliada do mesmo jeito, só custa mais trabalho ao juiz.",
+  "type": "object",
+  "required": ["achados"],
+  "additionalProperties": false,
+  "properties": {
+    "leb": {
+      "type": "object",
+      "description": "Vínculo copiado do cabeçalho da TAREFA.md entregue. Divergência aqui significa entrega feita contra outra versão da instância — o run não é comparável.",
+      "additionalProperties": true,
+      "properties": {
+        "instancia": { "type": "string", "examples": ["LEB-100-A"] },
+        "versao_instancia": { "type": "string", "examples": ["1.1"] },
+        "matriz_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$|^n/d$" }
+      }
+    },
+    "achados": {
+      "type": "array",
+      "description": "Um item por problema reportado. Sem contagem mínima nem máxima — o padrão nunca revela quantas falhas existem.",
+      "items": { "$ref": "#/$defs/achado" }
+    },
+    "nao_alterei": {
+      "type": "array",
+      "description": "Decisões explícitas de não mudar (TAREFA §4.3). Alimenta a rubrica EXPL (trade_offs).",
+      "items": {
+        "type": "object",
+        "required": ["o_que", "porque"],
+        "additionalProperties": false,
+        "properties": {
+          "o_que": { "type": "string" },
+          "porque": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "achado": {
+      "type": "object",
+      "required": ["id", "arquivo", "linha", "categoria", "severidade", "confianca", "mecanismo"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Identificador do próprio modelo (F1, F2, …), único no arquivo e igual ao usado no RELATORIO.md. NÃO é um ID da taxonomia LEB.",
+          "minLength": 1
+        },
+        "titulo": { "type": "string", "description": "Resumo em uma linha." },
+        "arquivo": {
+          "type": "string",
+          "description": "Caminho relativo ao pacote, como entregue (ex.: code/lib.php).",
+          "minLength": 1
+        },
+        "linha": {
+          "type": "integer",
+          "description": "Linha na numeração original do arquivo recebido. Casa com a matriz por ±10 linhas ou mesma função (MATRIX.md §5.2).",
+          "minimum": 1
+        },
+        "linha_fim": { "type": "integer", "minimum": 1 },
+        "categoria": {
+          "type": "string",
+          "description": "Vocabulário neutro do enunciado canônico. Mapeamento do juiz para a taxonomia: seguranca→SEC, arquitetura→ARCH, bug→BUG, performance→PERF, qualidade→CLN. Categoria errada com trecho certo é C1 pela metade (JUDGE.md §4).",
+          "enum": ["seguranca", "arquitetura", "bug", "performance", "qualidade"]
+        },
+        "severidade": {
+          "type": "string",
+          "description": "Equivale a Crítica/Alta/Média/Baixa da matriz, sem acentos.",
+          "enum": ["critica", "alta", "media", "baixa"]
+        },
+        "confianca": {
+          "type": "integer",
+          "description": "0–100: probabilidade declarada de que o problema é real. Alimenta o Brier score (SCORING.md §9.1); não entra nos 1000 pontos.",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "mecanismo": {
+          "type": "string",
+          "description": "Por que falha, concretamente, neste código. É o que o juiz pontua em C2/R2 — genérico não conta.",
+          "minLength": 1
+        },
+        "impacto": { "type": "string" },
+        "correcao": { "type": "string", "description": "O que foi (ou seria) mudado." },
+        "corrigido": {
+          "type": "boolean",
+          "description": "Declaração do modelo. A evidência mecânica (probes, PROTOCOL §5 passo 3) prevalece sobre este campo."
+        }
+      }
+    }
+  }
+}

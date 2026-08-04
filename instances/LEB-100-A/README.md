@@ -30,13 +30,20 @@ private/               ← GABARITO — nunca entregar
 
 ## O que entregar ao modelo
 
-Apenas **`code/` + `manifest.md`** e o enunciado canônico do [`PROTOCOL.md §2`](../../protocol/PROTOCOL.md). Nada de `characterization/` nem `private/`.
-
-Montar o pacote público:
+Apenas o **pacote público**: `code/` + `manifest.md` + a `TAREFA.md` gerada de
+[`protocol/TAREFA.md`](../../protocol/TAREFA.md) — a tarefa vai **dentro** do pacote, não é
+colada à mão. Nada de `characterization/` nem `private/`.
 
 ```sh
-mkdir -p /tmp/leb-100-a && cp -r code manifest.md /tmp/leb-100-a/
+# da raiz do repo
+./leb pacote LEB-100-A
+# → runs/LEB-100-A/pacote/        ← mande esta pasta, e só ela
+# → runs/LEB-100-A/COMO-RODAR.md  ← a receita do run, com os hashes já preenchidos
 ```
+
+A `TAREFA.md` do pacote nasce vinculada a esta instância (id, nível, versão, spec, hash da
+matriz, modo) e o modelo repete esse bloco no `achados.json` que devolve — é assim que se prova
+contra qual versão do caso ele trabalhou ([`PROTOCOL §2.2`](../../protocol/PROTOCOL.md)).
 
 ## Como esta instância foi validada
 

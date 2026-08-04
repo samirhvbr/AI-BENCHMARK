@@ -1,0 +1,295 @@
+#!/usr/bin/env python3
+"""leb — o comando do operador.
+
+Um ciclo de avaliação, quatro passos, uma pasta por instância:
+
+    ./leb pacote    LEB-100-A                      → monta o que vai para o agente
+    ./leb avaliar   LEB-100-A runs/.../entrega     → roda o harness na entrega
+    ./leb scorecard LEB-100-A <run> --veredito x   → monta o scorecard de 1000 pts
+    ./leb estado    [LEB-100-A]                    → o que já foi feito
+
+Tudo de um run vive em runs/<INSTÂNCIA>/ (gitignored). Dentro dela, `pacote/` é a
+única pasta que o agente pode ver. Este script só orquestra harness/pack.py,
+harness/leb_harness.py e harness/score.py — a lógica está neles.
+"""
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+
+ROOT = os.path.dirname(os.path.abspath(__file__))
+RUNS = os.path.join(ROOT, "runs")
+
+BOLD, DIM, OFF = "\033[1m", "\033[2m", "\033[0m"
+
+
+def diz(msg=""):
+    print(msg, file=sys.stderr)
+
+
+def rel(path):
+    try:
+        return os.path.relpath(path, ROOT)
+    except ValueError:
+        return path
+
+
+def instancia(nome):
+    """Aceita 'LEB-100-A' ou um caminho para a instância."""
+    for cand in (os.path.join(ROOT, "instances", nome), os.path.join(ROOT, nome), nome):
+        if os.path.isdir(os.path.join(cand, "code")):
+            return os.path.abspath(cand)
+    sys.exit("[leb] instância desconhecida: %s (veja ./leb instancias)" % nome)
+
+
+def rodar(cmd, capturar=False):
+    r = subprocess.run(cmd, cwd=ROOT, text=True,
+                       stdout=subprocess.PIPE if capturar else None)
+    if r.returncode not in (0, 2):
+        sys.exit(r.returncode)
+    return r
+
+
+# --------------------------------------------------------------------- pacote
+
+COMO_RODAR = """# Run — {inst}
+
+> Gerado por `./leb pacote {inst}`. Este arquivo é seu, do operador: **não** vai para o agente.
+
+## 1. O que mandar
+
+Mande **a pasta `pacote/`** — e nada além dela:
+
+    {pacote}
+
+Ela tem `code/`, `manifest.md` e `TAREFA.md`. A mensagem para o agente pode ser só:
+
+> Leia o `TAREFA.md` e execute. Devolva `code/` alterado, `RELATORIO.md` e `achados.json`.
+
+Não explique o sistema, não dê dica de categoria, não diga quantos problemas existem.
+
+## 2. Anote antes de começar
+
+| Parâmetro | Valor |
+| --- | --- |
+| Modelo + versão exata | |
+| Temperatura | (default do provedor) |
+| Modo | {modo} |
+| Orçamento de turnos/tokens | |
+| Data | |
+| Instância | {inst} v{versao} |
+| Matriz (SHA-256) | `{matriz}` |
+| Pacote (SHA-256) | `{pacote_sha}` |
+
+## 3. Guardar a entrega
+
+Crie uma pasta por execução (3 execuções = resultado oficial, sem retry seletivo):
+
+    {base}/<modelo>-1/entrega/     ← code/ + RELATORIO.md + achados.json
+    {base}/<modelo>-2/entrega/
+    {base}/<modelo>-3/entrega/
+
+## 4. Avaliar
+
+    ./leb avaliar {inst} {base_rel}/<modelo>-1/entrega
+    # depois do juiz (scoring/JUDGE.md → veredito.json):
+    ./leb scorecard {inst} <modelo>-1 --veredito <caminho>/veredito.json
+
+Nota oficial = **mediana do TOTAL** das 3 execuções.
+"""
+
+
+def cmd_pacote(a):
+    inst = instancia(a.instancia)
+    nome = os.path.basename(inst)
+    base = os.path.join(RUNS, nome)
+    destino = os.path.join(base, "pacote")
+
+    cmd = [sys.executable, os.path.join("harness", "pack.py"),
+           "--instance", rel(inst), "--out", rel(destino), "--mode", a.mode]
+    if a.turnos:
+        cmd += ["--turnos", str(a.turnos)]
+    pacote_sha = rodar(cmd, capturar=True).stdout.strip()
+
+    versao, matriz = "n/d", "n/d"
+    mpath = os.path.join(inst, "private", "matrix.json")
+    if os.path.exists(mpath):
+        with open(mpath, encoding="utf-8") as f:
+            m = json.load(f)
+        versao = str(m.get("version", "n/d"))
+    sha_file = os.path.join(destino, ".leb-pacote.sha256")
+    tarefa = os.path.join(destino, "TAREFA.md")
+    if os.path.exists(tarefa):
+        with open(tarefa, encoding="utf-8") as f:
+            for linha in f:
+                if "SHA-256" in linha and "`" in linha:
+                    matriz = linha.split("`")[1]
+                    break
+
+    modo = "S (turno único)" if a.mode == "S" else "A (agêntico · %s turnos)" % a.turnos
+    with open(os.path.join(base, "COMO-RODAR.md"), "w", encoding="utf-8") as f:
+        f.write(COMO_RODAR.format(inst=nome, pacote=rel(destino), modo=modo, versao=versao,
+                                  matriz=matriz, pacote_sha=pacote_sha, base=rel(base),
+                                  base_rel=rel(base)))
+
+    diz()
+    diz("%sMande esta pasta para o agente:%s" % (BOLD, OFF))
+    diz("    %s" % rel(destino))
+    diz()
+    diz("%sE diga só isto:%s" % (BOLD, OFF))
+    diz('    "Leia o TAREFA.md e execute. Devolva code/ alterado, RELATORIO.md e achados.json."')
+    diz()
+    diz("Receita completa do run (o que anotar, onde salvar, como avaliar):")
+    diz("    %s" % rel(os.path.join(base, "COMO-RODAR.md")))
+    diz("%s(sha_file: %s)%s" % (DIM, rel(sha_file), OFF))
+
+
+# -------------------------------------------------------------------- avaliar
+
+def cmd_avaliar(a):
+    inst = instancia(a.instancia)
+    nome = os.path.basename(inst)
+    entrega = os.path.abspath(a.entrega)
+    if not os.path.isdir(entrega):
+        sys.exit("[leb] entrega não encontrada: %s" % entrega)
+
+    code = os.path.join(entrega, "code") if os.path.isdir(os.path.join(entrega, "code")) else entrega
+    if not any(os.path.isfile(os.path.join(code, f)) for f in os.listdir(code)):
+        sys.exit("[leb] %s não parece uma pasta code/ (sem arquivos)" % rel(code))
+
+    run = a.label or os.path.basename(os.path.dirname(entrega) if code != entrega else entrega)
+    saida = os.path.join(RUNS, nome, run)
+    os.makedirs(saida, exist_ok=True)
+    mech = os.path.join(saida, "mecanico.json")
+
+    # conferência barata que evita descobrir problema só na hora do juiz
+    achados = os.path.join(entrega, "achados.json")
+    if os.path.exists(achados):
+        try:
+            with open(achados, encoding="utf-8") as f:
+                d = json.load(f)
+            diz("[leb] achados.json ok — %d achado(s)" % len(d.get("achados", [])))
+        except json.JSONDecodeError as e:
+            diz("[leb] AVISO: achados.json inválido (%s) — o juiz vai ter de usar só o relatório" % e)
+    else:
+        diz("[leb] AVISO: sem achados.json na entrega — matching manual pelo RELATORIO.md")
+    if not os.path.exists(os.path.join(entrega, "RELATORIO.md")):
+        diz("[leb] AVISO: sem RELATORIO.md na entrega — sem ele não há C2/EXPL para pontuar")
+
+    r = rodar([sys.executable, os.path.join("harness", "leb_harness.py"),
+               "--instance", rel(inst), "--submission", rel(code), "--out", rel(mech)])
+
+    diz()
+    if r.returncode == 2:
+        diz("%s[leb] REGRESSÃO: a entrega quebrou a caracterização.%s" % (BOLD, OFF))
+    diz("Mecânico → %s" % rel(mech))
+    diz()
+    diz("%sPróximo passo — o juiz%s (scoring/JUDGE.md): leia RELATORIO.md + achados.json contra a" % (BOLD, OFF))
+    diz("matriz e produza o veredito no formato scoring/judge.schema.json. Depois:")
+    diz("    ./leb scorecard %s %s --veredito <caminho>/veredito.json" % (nome, run))
+
+
+# ------------------------------------------------------------------ scorecard
+
+def cmd_scorecard(a):
+    inst = instancia(a.instancia)
+    nome = os.path.basename(inst)
+    saida = os.path.join(RUNS, nome, a.run)
+    mech = os.path.join(saida, "mecanico.json")
+    if not os.path.exists(mech):
+        sys.exit("[leb] falta o relatório mecânico: %s (rode ./leb avaliar antes)" % rel(mech))
+    matriz = os.path.join(inst, "private", "matrix.json")
+    if not os.path.exists(matriz):
+        sys.exit("[leb] esta instância não tem private/matrix.json — sem gabarito não há scorecard")
+
+    card = os.path.join(saida, "scorecard.json")
+    cmd = [sys.executable, os.path.join("harness", "score.py"),
+           "--matrix", rel(matriz), "--mechanical", rel(mech),
+           "--judge", os.path.abspath(a.veredito), "--out", rel(card)]
+    if a.custo:
+        cmd += ["--cost", os.path.abspath(a.custo)]
+    rodar(cmd)
+    diz()
+    diz("Scorecard → %s" % rel(card))
+    diz("Oficial = mediana do TOTAL de 3 execuções (PROTOCOL §4). Veja ./leb estado %s" % nome)
+
+
+# --------------------------------------------------------------------- estado
+
+def cmd_estado(a):
+    alvos = [a.instancia] if a.instancia else sorted(
+        d for d in os.listdir(RUNS) if os.path.isdir(os.path.join(RUNS, d))) if os.path.isdir(RUNS) else []
+    if not alvos:
+        diz("[leb] nenhum run ainda. Comece com: ./leb pacote LEB-100-A")
+        return
+    for nome in alvos:
+        base = os.path.join(RUNS, os.path.basename(instancia(nome)))
+        if not os.path.isdir(base):
+            diz("%s — nenhum run" % nome)
+            continue
+        diz("%s%s%s  (%s)" % (BOLD, os.path.basename(base), OFF, rel(base)))
+        pacote = os.path.join(base, "pacote")
+        diz("  pacote     %s" % ("montado" if os.path.isdir(pacote) else "— (./leb pacote)"))
+        for run in sorted(d for d in os.listdir(base) if os.path.isdir(os.path.join(base, d)) and d != "pacote"):
+            r = os.path.join(base, run)
+            etapas = []
+            etapas.append("mecânico" if os.path.exists(os.path.join(r, "mecanico.json")) else "—")
+            etapas.append("scorecard" if os.path.exists(os.path.join(r, "scorecard.json")) else "—")
+            total = ""
+            card = os.path.join(r, "scorecard.json")
+            if os.path.exists(card):
+                try:
+                    with open(card, encoding="utf-8") as f:
+                        total = "  TOTAL %s" % json.load(f).get("total", "?")
+                except (json.JSONDecodeError, OSError):
+                    pass
+            diz("  %-10s %s%s" % (run, " · ".join(etapas), total))
+
+
+def cmd_instancias(_):
+    base = os.path.join(ROOT, "instances")
+    for nome in sorted(os.listdir(base)):
+        if os.path.isdir(os.path.join(base, nome, "code")):
+            diz(nome)
+
+
+def main():
+    ap = argparse.ArgumentParser(
+        prog="leb", description="operador do LEB — um ciclo de avaliação, quatro comandos",
+        epilog="ciclo: pacote → (agente) → avaliar → (juiz) → scorecard · 3× → mediana")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+
+    p = sub.add_parser("pacote", help="monta a pasta que vai para o agente")
+    p.add_argument("instancia")
+    p.add_argument("--mode", choices=["S", "A"], default="S")
+    p.add_argument("--turnos", type=int)
+    p.set_defaults(fn=cmd_pacote)
+
+    p = sub.add_parser("avaliar", help="roda o harness mecânico na entrega do agente")
+    p.add_argument("instancia")
+    p.add_argument("entrega", help="pasta da entrega (com code/ dentro, ou o próprio code/)")
+    p.add_argument("--label", help="nome do run (default: nome da pasta)")
+    p.set_defaults(fn=cmd_avaliar)
+
+    p = sub.add_parser("scorecard", help="junta mecânico + veredito do juiz → 1000 pontos")
+    p.add_argument("instancia")
+    p.add_argument("run")
+    p.add_argument("--veredito", required=True, help="JSON do juiz (scoring/judge.schema.json)")
+    p.add_argument("--custo", help="JSON com o bloco cost_time (opcional)")
+    p.set_defaults(fn=cmd_scorecard)
+
+    p = sub.add_parser("estado", help="o que já foi montado, avaliado e pontuado")
+    p.add_argument("instancia", nargs="?")
+    p.set_defaults(fn=cmd_estado)
+
+    p = sub.add_parser("instancias", help="lista as instâncias disponíveis")
+    p.set_defaults(fn=cmd_instancias)
+
+    a = ap.parse_args()
+    a.fn(a)
+
+
+if __name__ == "__main__":
+    main()

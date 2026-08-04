@@ -1,6 +1,51 @@
 # LEB — Harness de avaliação
 
-Orquestrador da parte **mecânica** e reprodutível do protocolo (`../protocol/PROTOCOL.md §5`).
+Ferramentas do ciclo: `pack.py` monta o que vai **para** o modelo; `leb_harness.py` e
+`score.py` avaliam o que **volta**.
+
+| Ferramenta | Papel | Pelo `leb` |
+| --- | --- | --- |
+| [`pack.py`](pack.py) | monta o pacote público (`PROTOCOL §1`): `code/` + `manifest.md` + `TAREFA.md` | `./leb pacote <ID>` |
+| [`leb_harness.py`](leb_harness.py) | passos mecânicos do pipeline (`PROTOCOL §5`) → relatório JSON | `./leb avaliar <ID> <entrega>` |
+| [`score.py`](score.py) | montador do scorecard de 1000 pontos | `./leb scorecard <ID> <run> --veredito …` |
+
+No dia a dia use o [`../leb`](../leb) da raiz: ele resolve os caminhos, guarda tudo em
+`runs/<ID>/` e diz qual é o próximo passo. Os scripts abaixo continuam sendo a interface
+real — o `leb` só os chama.
+
+## Empacotador (`pack.py`)
+
+```sh
+python3 harness/pack.py --instance instances/LEB-100-A                       # → runs/LEB-100-A/pacote
+python3 harness/pack.py --instance instances/LEB-100-A --mode A --turnos 20  # modo agêntico
+python3 harness/pack.py --instance instances/LEB-100-A --out /tmp/leb-pkg    # destino avulso
+```
+
+Sem `--out`, o destino é `runs/<instância>/pacote` e é **sempre refeito** (o pacote é derivado
+da instância, nunca fonte). Um `--out` avulso só é sobrescrito com `--force`, ou se já for um
+pacote montado por aqui.
+
+O que ele faz:
+
+1. Copia `code/` + `manifest.md` da instância — e nada mais. O destino é recriado do zero.
+2. Renderiza `TAREFA.md` a partir de [`../protocol/TAREFA.md`](../protocol/TAREFA.md),
+   preenchendo o **vínculo** (instância, nível, versão, spec, SHA-256 da matriz, modo). Os
+   metadados vêm do *cabeçalho* de `private/matrix.json` — nunca das falhas. Sem `private/`
+   à mão, informe por flag (`--instance-id`, `--matrix-sha`, …).
+3. Varre o resultado: se qualquer caminho parecer gabarito (`matrix`, `private`, `verify`,
+   `characterization`, `probes`), **apaga a pasta** e sai com erro.
+4. Escreve `.leb-pacote.sha256` (sha por arquivo) e imprime o `package_sha256` no stdout.
+
+O pacote é **determinístico** — mesma instância + mesmo modo ⇒ bytes idênticos, sem timestamp
+embutido. Dois avaliadores em máquinas diferentes chegam ao mesmo `package_sha256`, que é
+parâmetro obrigatório do run (`PROTOCOL §3`). Sai **1** em erro (vazamento, instância inválida,
+modo A sem `--turnos`, placeholder não resolvido), **0** em sucesso.
+
+> Nunca edite a `TAREFA.md` de dentro do pacote: a tarefa é do padrão, não da instância
+> (`../SPEC.md §9.4`). Ajuste sempre `protocol/TAREFA.md` e reempacote.
+
+## Avaliação mecânica (`leb_harness.py`)
+
 Roda os passos que **não** exigem juiz e emite um relatório JSON:
 
 | Passo (PROTOCOL §5) | O que faz | Estado |
@@ -19,7 +64,7 @@ instância pode ser qualquer uma; o harness só depende de dois contratos de sa�
 
 ## Pré-requisitos
 
-- Docker (usa o `characterization/docker-compose.yml` da instância: MySQL 8 + PHP 8.4)
+- Docker (usa o `characterization/docker-compose.yml` da instância: MySQL 8 + PHP 8.4) — só para `leb_harness.py`; o `pack.py` não precisa
 - Python 3 (stdlib apenas)
 
 ## Uso
@@ -32,7 +77,7 @@ python3 harness/leb_harness.py --instance instances/LEB-100-A
 python3 harness/leb_harness.py \
     --instance instances/LEB-100-A \
     --submission /caminho/para/code_entregue \
-    --out instances/LEB-100-A/runs/<modelo>.mech.json
+    --out runs/LEB-100-A/<modelo>-1/mecanico.json
 ```
 
 A entrega (`--submission`) é uma pasta `code/` completa (o modelo edita o legado
